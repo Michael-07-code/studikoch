@@ -26,22 +26,22 @@ export default function NutritionTable({ nutrition, servings }: Props) {
 
   return (
     <div>
-      <h3 className="mb-2 text-sm font-semibold text-stone-900">
+      <h3 className="mb-2 text-sm font-semibold text-stone-100">
         Nährwerte · {servings} Portion{servings === 1 ? '' : 'en'}
       </h3>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {rows.map((r) => (
           <div
             key={r.label}
-            className="rounded-xl bg-stone-50 px-3 py-2 text-center"
+            className="rounded-xl bg-stone-800 px-3 py-2 text-center"
           >
-            <p className="text-base font-semibold text-stone-900">
+            <p className="text-base font-semibold text-stone-100">
               {r.value}
-              <span className="ml-0.5 text-xs font-normal text-stone-500">
+              <span className="ml-0.5 text-xs font-normal text-stone-400">
                 {r.unit}
               </span>
             </p>
-            <p className="text-xs text-stone-500">{r.label}</p>
+            <p className="text-xs text-stone-400">{r.label}</p>
           </div>
         ))}
       </div>

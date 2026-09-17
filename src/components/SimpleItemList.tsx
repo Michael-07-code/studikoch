@@ -41,7 +41,7 @@ export default function SimpleItemList({
 
   return (
     <div className="space-y-3">
-      <h2 className="text-lg font-semibold text-stone-900">{title}</h2>
+      <h2 className="text-lg font-semibold text-stone-100">{title}</h2>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-2 sm:flex-row">
         <input
@@ -50,7 +50,7 @@ export default function SimpleItemList({
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder={placeholder}
-          className="flex-1 rounded-xl border border-stone-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+          className="flex-1 rounded-xl border border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
         />
         <datalist id={datalistId}>
           {suggestions.map((s) => (
@@ -63,9 +63,9 @@ export default function SimpleItemList({
       </form>
 
       {items.length === 0 ? (
-        <p className="text-sm text-stone-500">{emptyText}</p>
+        <p className="text-sm text-stone-400">{emptyText}</p>
       ) : (
-        <ul className="divide-y divide-stone-200 rounded-xl border border-stone-200 bg-white shadow-card">
+        <ul className="divide-y divide-stone-700 rounded-xl border border-stone-700 bg-stone-900 shadow-card">
           {items.map((item) => (
             <li
               key={item.id}
@@ -74,7 +74,7 @@ export default function SimpleItemList({
               <span>{item.name}</span>
               <button
                 onClick={() => onRemove(item.id)}
-                className="text-stone-400 transition-colors hover:text-red-600"
+                className="text-stone-500 transition-colors hover:text-red-400"
                 aria-label={`${item.name} entfernen`}
               >
                 Entfernen

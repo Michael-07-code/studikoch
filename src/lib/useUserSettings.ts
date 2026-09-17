@@ -15,6 +15,7 @@ export interface UserSettingsRow {
   recipe_preferences: unknown
   budget_settings: unknown
   weekly_plan: unknown
+  app_settings: unknown
 }
 
 const EMPTY_SETTINGS: Omit<UserSettingsRow, 'user_id'> = {
@@ -22,6 +23,7 @@ const EMPTY_SETTINGS: Omit<UserSettingsRow, 'user_id'> = {
   recipe_preferences: null,
   budget_settings: null,
   weekly_plan: null,
+  app_settings: null,
 }
 
 /**

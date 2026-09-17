@@ -4,6 +4,7 @@ import AddItemForm from './AddItemForm'
 import ShoppingListView from './ShoppingListView'
 import { SUPERMARKET_SUGGESTIONS } from './suggestions'
 import { useShoppingList } from './useShoppingList'
+import { useAppSettings } from '../../lib/useAppSettings'
 import PricesPanel from '../prices/PricesPage'
 import { PageHeader, TabBar, Hint } from '../../components/ui'
 
@@ -22,7 +23,10 @@ export default function ShoppingListPage() {
     getPricesFor,
     getCheapestElsewhere,
     updateItemPrice,
+    preferredSupermarketId,
+    preferredSupermarket,
   } = useShoppingList()
+  const { updateAppSettings } = useAppSettings()
 
   const tabs = [
     { id: 'liste', label: `Einkaufsliste (${items.length})` },
@@ -32,7 +36,7 @@ export default function ShoppingListPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Einkaufsliste" />
+      <PageHeader title="Einkaufsliste" icon="🛒" tone="sky" />
 
       <TabBar tabs={tabs} active={tab} onChange={(id) => setTab(id as Tab)} />
 
@@ -42,6 +46,7 @@ export default function ShoppingListPage() {
             supermarkets={supermarkets}
             onAdd={addItem}
             getPricesFor={getPricesFor}
+            preferredSupermarketId={preferredSupermarketId}
           />
           {supermarkets.length === 0 && (
             <Hint>
@@ -54,21 +59,56 @@ export default function ShoppingListPage() {
             onToggle={toggleItem}
             onRemove={removeItem}
             getCheapestElsewhere={getCheapestElsewhere}
+            preferredSupermarketName={preferredSupermarket?.name ?? null}
           />
         </div>
       )}
 
       {tab === 'supermaerkte' && (
-        <SimpleItemList
-          title="Meine Supermärkte"
-          items={supermarkets}
-          onAdd={addSupermarket}
-          onRemove={removeSupermarket}
-          suggestions={SUPERMARKET_SUGGESTIONS}
-          placeholder="z. B. Rewe"
-          emptyText="Noch keine Supermärkte eingetragen."
-          datalistId="supermarket-suggestions"
-        />
+        <div className="space-y-4">
+          {supermarkets.length > 0 && (
+            <div className="rounded-xl border border-stone-700 bg-stone-900 p-3 shadow-card">
+              <label className="flex flex-col gap-1 text-sm text-stone-300">
+                <span className="font-medium">
+                  Bevorzugter Supermarkt für die Einkaufsliste
+                </span>
+                <select
+                  value={preferredSupermarketId ?? ''}
+                  onChange={(e) =>
+                    updateAppSettings({
+                      preferredSupermarketId: e.target.value || null,
+                    })
+                  }
+                  className="rounded-xl border border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                >
+                  <option value="">
+                    Kein bevorzugter Markt (günstigster pro Artikel)
+                  </option>
+                  {supermarkets.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <Hint>
+                Neue Artikel werden dann mit dem Preis in diesem einen Markt
+                angelegt statt über mehrere Läden verteilt. Artikel, die es
+                dort nicht gibt, landen in einem eigenen Bereich in der Liste.
+              </Hint>
+            </div>
+          )}
+          <SimpleItemList
+            title="Meine Supermärkte"
+            items={supermarkets}
+            onAdd={addSupermarket}
+            onRemove={removeSupermarket}
+            suggestions={SUPERMARKET_SUGGESTIONS}
+            placeholder="z. B. Rewe"
+            emptyText="Noch keine Supermärkte eingetragen."
+            datalistId="supermarket-suggestions"
+          />
+        </div>
       )}
 
       {tab === 'preise' && (

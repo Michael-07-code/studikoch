@@ -108,7 +108,29 @@ create table if not exists user_settings (
   recipe_preferences jsonb,
   budget_settings jsonb,
   weekly_plan jsonb,
+  -- Kleine Verhaltens-Einstellungen (z. B. "beim Speichern nach Mahlzeit
+  -- fragen?", bevorzugter Supermarkt) – freies JSON für künftige Erweiterung.
+  app_settings jsonb,
   updated_at timestamptz not null default now()
+);
+
+-- ---------------------------------------------------------------------
+-- Dauerhafter, geräteübergreifender Rezept-Cache (siehe
+-- src/features/recipes/spoonacular.ts). Keine user_id: Rezeptinhalte von
+-- Spoonacular sind öffentliche, nicht-persönliche Daten – ein einziger
+-- geteilter Cache für den ganzen Account (und alle Geräte) ist hier
+-- sinnvoller als eine Kopie pro Nutzer.
+-- ---------------------------------------------------------------------
+create table if not exists recipe_cache (
+  recipe_id text primary key,
+  recipe jsonb not null,
+  cached_at timestamptz not null default now()
+);
+
+create table if not exists ingredient_query_cache (
+  query_key text primary key,
+  results jsonb not null,
+  cached_at timestamptz not null default now()
 );
 
 -- ---------------------------------------------------------------------
@@ -122,6 +144,8 @@ alter table shopping_list_items enable row level security;
 alter table recipe_lists enable row level security;
 alter table saved_recipes enable row level security;
 alter table user_settings enable row level security;
+alter table recipe_cache enable row level security;
+alter table ingredient_query_cache enable row level security;
 
 do $$
 declare
@@ -159,3 +183,19 @@ create policy "upsert own settings" on user_settings
   for insert with check (auth.uid() = user_id);
 create policy "update own settings" on user_settings
   for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- Geteilter Rezept-Cache: jeder eingeloggte Account darf lesen/schreiben
+-- (keine persönlichen Daten, siehe Kommentar bei der Tabellendefinition).
+create policy "authenticated read/write" on recipe_cache
+  for select using (auth.uid() is not null);
+create policy "authenticated insert" on recipe_cache
+  for insert with check (auth.uid() is not null);
+create policy "authenticated update" on recipe_cache
+  for update using (auth.uid() is not null) with check (auth.uid() is not null);
+
+create policy "authenticated read/write" on ingredient_query_cache
+  for select using (auth.uid() is not null);
+create policy "authenticated insert" on ingredient_query_cache
+  for insert with check (auth.uid() is not null);
+create policy "authenticated update" on ingredient_query_cache
+  for update using (auth.uid() is not null) with check (auth.uid() is not null);

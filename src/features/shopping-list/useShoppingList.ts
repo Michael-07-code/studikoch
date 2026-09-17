@@ -2,6 +2,8 @@ import { useMemo } from 'react'
 import type { ShoppingListItem, Supermarket } from './types'
 import { useSupabaseTable } from '../../lib/useSupabaseTable'
 import { useUserSettings } from '../../lib/useUserSettings'
+import { useAppSettings } from '../../lib/useAppSettings'
+import { showUndo } from '../../lib/undoToast'
 import {
   normalizeItemName,
   type PriceBook,
@@ -49,10 +51,15 @@ export function useShoppingList() {
   const itemsTable = useSupabaseTable<ShoppingListRow>('shopping_list_items')
   const marketsTable = useSupabaseTable<Supermarket>('supermarkets')
   const { settings, patch } = useUserSettings()
+  const { appSettings } = useAppSettings()
 
   const items = useMemo(() => itemsTable.rows.map(toItem), [itemsTable.rows])
   const supermarkets = marketsTable.rows
   const priceBook = (settings?.price_book as PriceBook | undefined) ?? {}
+  const preferredSupermarketId = appSettings.preferredSupermarketId
+  const preferredSupermarket = preferredSupermarketId
+    ? (supermarkets.find((s) => s.id === preferredSupermarketId) ?? null)
+    : null
 
   // Selbst gepflegtes "Preisbuch": merkt sich, was ein Artikel zuletzt in
   // welchem Supermarkt gekostet hat (ergänzt die Live-Preise auf der
@@ -118,13 +125,44 @@ export function useShoppingList() {
   // Zutaten – egal ob manuell oder aus einem Rezept hinzugefügt – gleich mit
   // Preis für den jeweiligen Supermarkt in die Liste. Schlägt der Abruf fehl
   // (z. B. offline), wird der Artikel einfach ohne Preis hinzugefügt.
-  async function enrichWithPrice(input: NewItem): Promise<NewItem> {
+  //
+  // "resolveMarket" ist austauschbar, damit addMany() beim gleichzeitigen
+  // Hinzufügen mehrerer Zutaten (z. B. ein ganzes Rezept) alle Anfragen für
+  // denselben Supermarkt-Namen dieselbe (bereits laufende) Anlage abwarten
+  // lassen kann – sonst würden parallele Aufrufe von findOrCreateSupermarket
+  // denselben Supermarkt mehrfach anlegen (Race Condition).
+  async function enrichWithPrice(
+    input: NewItem,
+    resolveMarket: (name: string) => Promise<Supermarket | null> = findOrCreateSupermarket,
+  ): Promise<NewItem> {
     if (input.price !== undefined && input.supermarketId) return input
     try {
       const products = await loadPriceData()
+
+      // Bevorzugten Supermarkt gesetzt (siehe Reiter "Supermärkte"): Preis
+      // gezielt für DIESEN Markt suchen statt den insgesamt günstigsten –
+      // Nutzerwunsch, nicht für ein Rezept über mehrere Läden verteilt
+      // einkaufen zu müssen. Kein Treffer dort -> Artikel bleibt ohne
+      // Supermarkt/Preis, damit er in der Liste als "nicht dort erhältlich"
+      // auffällt statt automatisch anderswo hin zu wandern.
+      if (preferredSupermarket) {
+        const candidates = cheapestPerStore(products, input.name, 10)
+        const ownMatch = candidates.find(
+          (c) =>
+            storeLabel(c.store).toLowerCase() ===
+            preferredSupermarket.name.trim().toLowerCase(),
+        )
+        if (!ownMatch) return input
+        return {
+          ...input,
+          price: input.price ?? ownMatch.price,
+          supermarketId: input.supermarketId ?? preferredSupermarket.id,
+        }
+      }
+
       const match = cheapestPerStore(products, input.name, 1)[0]
       if (!match) return input
-      const market = await findOrCreateSupermarket(storeLabel(match.store))
+      const market = await resolveMarket(storeLabel(match.store))
       return {
         ...input,
         price: input.price ?? match.price,
@@ -173,7 +211,7 @@ export function useShoppingList() {
       await mergeInto(match, enriched)
       return
     }
-    await itemsTable.insert({
+    const created = await itemsTable.insert({
       name: enriched.name,
       amount: enriched.amount ?? null,
       unit: enriched.unit ?? null,
@@ -183,10 +221,31 @@ export function useShoppingList() {
       checked: false,
     })
     recordPrice(enriched.name, enriched.supermarketId, enriched.price)
+    if (created) {
+      showUndo(`„${enriched.name}" zur Liste hinzugefügt`, () =>
+        itemsTable.remove(created.id),
+      )
+    }
   }
 
   async function addMany(inputs: NewItem[]) {
-    const enrichedList = await Promise.all(inputs.map(enrichWithPrice))
+    // Ein geteilter Cache pro Aufruf: mehrere Zutaten desselben Rezepts, die
+    // zufällig beim selben Supermarkt am günstigsten sind, teilen sich hier
+    // dieselbe (einmalige) Anlage statt sich gegenseitig zu duplizieren.
+    const marketPromises = new Map<string, Promise<Supermarket | null>>()
+    function resolveMarket(name: string): Promise<Supermarket | null> {
+      const key = name.toLowerCase()
+      let pending = marketPromises.get(key)
+      if (!pending) {
+        pending = findOrCreateSupermarket(name)
+        marketPromises.set(key, pending)
+      }
+      return pending
+    }
+
+    const enrichedList = await Promise.all(
+      inputs.map((input) => enrichWithPrice(input, resolveMarket)),
+    )
     const toInsert: NewItem[] = []
     for (const enriched of enrichedList) {
       const match = findMergeCandidate(enriched)
@@ -198,7 +257,7 @@ export function useShoppingList() {
       }
     }
     if (toInsert.length > 0) {
-      await itemsTable.insertMany(
+      const created = await itemsTable.insertMany(
         toInsert.map((input) => ({
           name: input.name,
           amount: input.amount ?? null,
@@ -209,6 +268,16 @@ export function useShoppingList() {
           checked: false,
         })),
       )
+      if (created.length > 0) {
+        showUndo(
+          created.length === 1
+            ? `„${created[0].name}" zur Liste hinzugefügt`
+            : `${created.length} Artikel zur Liste hinzugefügt`,
+          () => {
+            for (const row of created) itemsTable.remove(row.id)
+          },
+        )
+      }
     }
   }
 
@@ -219,7 +288,21 @@ export function useShoppingList() {
   }
 
   function removeItem(id: string) {
+    const removed = items.find((i) => i.id === id)
     itemsTable.remove(id)
+    if (removed) {
+      showUndo(`„${removed.name}" entfernt`, () => {
+        itemsTable.insert({
+          name: removed.name,
+          amount: removed.amount ?? null,
+          unit: removed.unit ?? null,
+          price: removed.price ?? null,
+          supermarket_id: removed.supermarketId,
+          category: removed.category ?? null,
+          checked: removed.checked,
+        })
+      })
+    }
   }
 
   // Übernimmt einen (z. B. auf der Preise-Seite gefundenen) Live-Preis in
@@ -231,11 +314,15 @@ export function useShoppingList() {
     if (item) recordPrice(item.name, supermarketId, price)
   }
 
-  function addSupermarket(name: string) {
-    marketsTable.insert({ name })
+  async function addSupermarket(name: string) {
+    const created = await marketsTable.insert({ name })
+    if (created) {
+      showUndo(`„${name}" hinzugefügt`, () => marketsTable.remove(created.id))
+    }
   }
 
   function removeSupermarket(id: string) {
+    const removed = marketsTable.rows.find((s) => s.id === id)
     marketsTable.remove(id)
     // Die Datenbank setzt "supermarket_id" bei betroffenen Artikeln dank
     // "on delete set null" automatisch zurück – den lokalen Stand
@@ -245,6 +332,11 @@ export function useShoppingList() {
         r.supermarket_id === id ? { ...r, supermarket_id: null } : r,
       ),
     )
+    if (removed) {
+      showUndo(`„${removed.name}" entfernt`, () => {
+        marketsTable.insert({ name: removed.name })
+      })
+    }
   }
 
   return {
@@ -259,6 +351,8 @@ export function useShoppingList() {
     removeSupermarket,
     getPricesFor,
     getCheapestElsewhere,
+    preferredSupermarketId,
+    preferredSupermarket,
     loading: itemsTable.loading || marketsTable.loading,
   }
 }

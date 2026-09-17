@@ -1,0 +1,52 @@
+import { useAppSettings } from '../../lib/useAppSettings'
+import { Card, Hint, PageHeader } from '../../components/ui'
+
+// Kleine, zentrale Stelle für App-weite Verhaltens-Einstellungen (bisher
+// nirgends unterzubringen, da sie kein einzelnes Feature betreffen). Der
+// bevorzugte Supermarkt für die Einkaufsliste liegt dagegen direkt im
+// Reiter "Supermärkte" der Einkaufsliste, da er dort inhaltlich hingehört.
+export default function SettingsPage() {
+  const { appSettings, updateAppSettings, loading } = useAppSettings()
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Einstellungen"
+        description="Verhalten der App an deine Gewohnheiten anpassen."
+        icon="⚙️"
+        tone="neutral"
+      />
+
+      <Card className="space-y-2">
+        <label className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            checked={appSettings.askMealTypeOnSave}
+            disabled={loading}
+            onChange={(e) =>
+              updateAppSettings({ askMealTypeOnSave: e.target.checked })
+            }
+            className="mt-0.5 size-4 rounded border-stone-700 text-emerald-600 focus:ring-emerald-500"
+          />
+          <span>
+            <span className="block text-sm font-medium text-stone-100">
+              Beim Speichern eines Rezepts nach der Mahlzeit fragen
+            </span>
+            <span className="block text-sm text-stone-400">
+              Frühstück, Mittagessen oder Abendessen direkt beim Speichern
+              festlegen. Ausgeschaltet: Rezepte werden ohne Nachfrage als
+              „Sonstiges" gespeichert, du kannst die Mahlzeit später jederzeit
+              unter „Meine Rezepte" nachtragen.
+            </span>
+          </span>
+        </label>
+        <Hint>
+          Persönlicher Hinweis: Mittag- und Abendessen werden in
+          Vorschlägen (z. B. im Wochenplan) ohnehin gleich behandelt – du
+          kannst also auch mittags ein als „Abendessen" gespeichertes Rezept
+          kochen und umgekehrt.
+        </Hint>
+      </Card>
+    </div>
+  )
+}

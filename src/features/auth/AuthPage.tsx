@@ -50,27 +50,27 @@ export default function AuthPage() {
   return (
     <div className="mx-auto flex min-h-[70vh] max-w-sm flex-col justify-center space-y-6">
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-emerald-700">
+        <h1 className="text-2xl font-extrabold tracking-tight text-emerald-400">
           StudiKoch
         </h1>
-        <p className="mt-1 text-sm text-stone-600">
+        <p className="mt-1 text-sm text-stone-300">
           {mode === 'signin' ? 'Melde dich an.' : 'Konto erstellen – kostenlos.'}
         </p>
       </div>
 
       <Card padded={false} className="p-5">
         <form onSubmit={handleSubmit} className="space-y-3">
-          <label className="block text-sm text-stone-700">
+          <label className="block text-sm text-stone-300">
             E-Mail
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-stone-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="mt-1 w-full rounded-xl border border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             />
           </label>
-          <label className="block text-sm text-stone-700">
+          <label className="block text-sm text-stone-300">
             Passwort
             <input
               type="password"
@@ -78,12 +78,12 @@ export default function AuthPage() {
               minLength={6}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-stone-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="mt-1 w-full rounded-xl border border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             />
           </label>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          {info && <p className="text-sm text-emerald-700">{info}</p>}
+          {error && <p className="text-sm text-red-400">{error}</p>}
+          {info && <p className="text-sm text-emerald-400">{info}</p>}
 
           <Button type="submit" disabled={loading} className="w-full">
             {loading
@@ -101,7 +101,7 @@ export default function AuthPage() {
           setError(null)
           setInfo(null)
         }}
-        className="text-sm text-emerald-700 underline"
+        className="text-sm text-emerald-400 underline"
       >
         {mode === 'signin'
           ? 'Noch kein Konto? Registrieren'

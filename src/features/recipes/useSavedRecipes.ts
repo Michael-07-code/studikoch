@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 import { useAuth } from '../../lib/AuthProvider'
+import { showUndo } from '../../lib/undoToast'
 import type { Recipe } from './types'
-import type { RecipeList, SavedRecipe } from './savedTypes'
+import type { MealType, RecipeList, SavedRecipe } from './savedTypes'
 
 // So kommt eine Zeile aus "saved_recipes" zurück (snake_case). Die
 // interne Datenbank-ID der Zeile brauchen wir nach außen nicht – überall
@@ -85,6 +86,10 @@ export function useSavedRecipes() {
       // muss der Nutzer sie nicht selbst eintragen.
       prepTimeMinutes?: number
       estimatedCostEuro?: number
+      // Direkt beim Speichern abgefragt (siehe MealTypeChooser) oder, wenn
+      // die Einstellung "beim Speichern fragen" aus ist, einfach weggelassen
+      // (dann "sonstiges", wie zuvor).
+      mealType?: MealType
     },
   ) {
     if (!supabase || !session) return
@@ -95,7 +100,7 @@ export function useSavedRecipes() {
       recipe_id: recipe.id,
       recipe,
       list_ids: options?.listIds ?? [],
-      meal_type: 'sonstiges',
+      meal_type: options?.mealType ?? 'sonstiges',
       prep_time_minutes: options?.prepTimeMinutes ?? null,
       estimated_cost_euro: options?.estimatedCostEuro ?? null,
     }
@@ -106,10 +111,15 @@ export function useSavedRecipes() {
       .single()
     if (!error && data) {
       setSaved((prev) => [toSavedRecipe(data as SavedRecipeRow), ...prev])
+      showUndo(`„${recipe.name}" gespeichert`, () => deleteSavedRow(recipe.id))
     }
   }
 
-  async function removeSaved(recipeId: string) {
+  // Reine Löschung ohne eigene Rückgängig-Leiste – wird sowohl von
+  // removeSaved() (zeigt "entfernt – Rückgängig") als auch vom Rückgängig-
+  // Handler von saveRecipe() genutzt (der soll beim Rückgängigmachen nicht
+  // seinerseits eine weitere Rückgängig-Leiste zum Wiederherstellen zeigen).
+  async function deleteSavedRow(recipeId: string) {
     if (!supabase || !session) return
     setSaved((prev) => prev.filter((s) => s.recipe.id !== recipeId))
     await supabase
@@ -117,6 +127,21 @@ export function useSavedRecipes() {
       .delete()
       .eq('user_id', session.user.id)
       .eq('recipe_id', recipeId)
+  }
+
+  async function removeSaved(recipeId: string) {
+    const removed = saved.find((s) => s.recipe.id === recipeId)
+    await deleteSavedRow(recipeId)
+    if (removed) {
+      showUndo(`„${removed.recipe.name}" entfernt`, () => {
+        saveRecipe(removed.recipe, {
+          listIds: removed.listIds,
+          mealType: removed.mealType,
+          prepTimeMinutes: removed.prepTimeMinutes,
+          estimatedCostEuro: removed.estimatedCostEuro,
+        })
+      })
+    }
   }
 
   async function updateSaved(

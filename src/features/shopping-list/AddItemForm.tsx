@@ -20,6 +20,9 @@ interface Props {
   // damit man beim Eintippen direkt sieht, was der Artikel zuletzt wo
   // gekostet hat (siehe useShoppingList/priceBook.ts).
   getPricesFor?: (name: string) => PriceEntry[]
+  // Wenn gesetzt: die Live-Vorschau zeigt (wie das tatsächliche Hinzufügen)
+  // den Preis in diesem einen Markt statt des insgesamt günstigsten.
+  preferredSupermarketId?: string | null
 }
 
 // Einfaches Debounce für die Live-Preissuche beim Tippen, damit nicht bei
@@ -37,6 +40,7 @@ export default function AddItemForm({
   supermarkets,
   onAdd,
   getPricesFor,
+  preferredSupermarketId,
 }: Props) {
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
@@ -69,15 +73,33 @@ export default function AddItemForm({
 
   const autoMatches = useMemo(() => {
     if (!priceProducts || !debouncedName || debouncedName.length < 3) return []
-    return cheapestPerStore(priceProducts, debouncedName, 3)
+    return cheapestPerStore(priceProducts, debouncedName, 10)
   }, [priceProducts, debouncedName])
 
-  const bestAutoMatch = autoMatches[0] ?? null
+  const preferredMarketName = preferredSupermarketId
+    ? (supermarkets.find((s) => s.id === preferredSupermarketId)?.name ?? null)
+    : null
+
+  // Mit bevorzugtem Supermarkt: Vorschau zeigt (wie das tatsächliche
+  // Hinzufügen, siehe useShoppingList.enrichWithPrice) den Preis in genau
+  // diesem Markt, nicht den insgesamt günstigsten – oder gar keinen, wenn
+  // der Artikel dort nicht geführt wird.
+  const bestAutoMatch = preferredMarketName
+    ? (autoMatches.find(
+        (m) => storeLabel(m.store).toLowerCase() === preferredMarketName.toLowerCase(),
+      ) ?? null)
+    : (autoMatches[0] ?? null)
   // Manuell im "Mehr Optionen"-Bereich gesetzter Preis/Supermarkt geht immer
-  // vor – sonst wird beim Speichern automatisch der günstigste Live-Preis
-  // verwendet (siehe useShoppingList.addItem -> enrichWithPrice).
+  // vor – sonst wird beim Speichern automatisch der Live-Preis verwendet
+  // (siehe useShoppingList.addItem -> enrichWithPrice).
   const willAutoAttachPrice =
     !price.trim() && !supermarketId && bestAutoMatch !== null
+  const notAvailableAtPreferred =
+    !price.trim() &&
+    !supermarketId &&
+    preferredMarketName !== null &&
+    autoMatches.length > 0 &&
+    bestAutoMatch === null
 
   const knownPrices = useMemo(() => {
     const trimmed = name.trim()
@@ -124,7 +146,7 @@ export default function AddItemForm({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Artikel, z. B. Milch"
-            className="w-full flex-1 rounded-xl border border-stone-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            className="w-full flex-1 rounded-xl border border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
           />
           <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
             <input
@@ -133,22 +155,28 @@ export default function AddItemForm({
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="Menge"
-              className="w-full rounded-xl border border-stone-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:w-20"
+              className="w-full rounded-xl border border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:w-20"
             />
             <input
               type="text"
               value={unit}
               onChange={(e) => setUnit(e.target.value)}
               placeholder="Einheit"
-              className="w-full rounded-xl border border-stone-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:w-24"
+              className="w-full rounded-xl border border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:w-24"
             />
           </div>
         </div>
 
         {bestAutoMatch && willAutoAttachPrice && (
-          <p className="text-xs font-medium text-emerald-700">
+          <p className="text-xs font-medium text-emerald-400">
             💶 {bestAutoMatch.price.toFixed(2)} € bei{' '}
             {storeLabel(bestAutoMatch.store)}
+          </p>
+        )}
+        {notAvailableAtPreferred && (
+          <p className="text-xs text-amber-400">
+            Nicht bei {preferredMarketName} gefunden – Artikel wird ohne Preis
+            angelegt.
           </p>
         )}
 
@@ -156,7 +184,7 @@ export default function AddItemForm({
           <button
             type="button"
             onClick={() => setShowAdvanced((v) => !v)}
-            className="text-xs font-medium text-emerald-700 underline"
+            className="text-xs font-medium text-emerald-400 underline"
           >
             {showAdvanced ? 'Weniger Optionen' : 'Mehr Optionen'}
           </button>
@@ -166,11 +194,11 @@ export default function AddItemForm({
         </div>
 
         {showAdvanced && (
-          <div className="grid grid-cols-1 gap-2 border-t border-stone-100 pt-2 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2 border-t border-stone-800 pt-2 sm:grid-cols-3">
             <select
               value={supermarketId}
               onChange={(e) => setSupermarketId(e.target.value)}
-              className="rounded-xl border border-stone-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="rounded-xl border border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             >
               <option value="">Automatisch (günstigster Supermarkt)</option>
               {supermarkets.map((s) => (
@@ -185,12 +213,12 @@ export default function AddItemForm({
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               placeholder="Preis € (manuell)"
-              className="rounded-xl border border-stone-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="rounded-xl border border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             />
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value as ItemCategory | '')}
-              className="rounded-xl border border-stone-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="rounded-xl border border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             >
               <option value="">
                 Automatisch{' '}

@@ -7,9 +7,13 @@ import {
   getIngredientQueryCache,
   getPoolRecipeById,
   getQueryCache,
+  getServerIngredientQuery,
+  getServerRecipeDetail,
   setCachedRecipeDetail,
   setIngredientQueryCache,
   setQueryCache,
+  setServerIngredientQuery,
+  setServerRecipeDetail,
 } from './recipeCache'
 
 const BASE_URL = 'https://api.spoonacular.com/recipes'
@@ -415,11 +419,19 @@ export async function findRecipesByIngredients(
 
   // Gleiche Zutatenauswahl kurz hintereinander (z. B. nach dem Ansehen eines
   // Vorschlags erneut "Rezeptvorschlag" geklickt) soll nicht jedes Mal neu
-  // kontingentiert werden.
+  // kontingentiert werden. Erst der schnelle, lokale Cache (dieses Gerät),
+  // dann der dauerhafte Server-Cache (auch von anderen Geräten befüllt) –
+  // erst wenn beide nichts liefern, wird wirklich bei Spoonacular angefragt.
   const cached = getIngredientQueryCache(ingredientNames, number, ranking)
   if (cached) {
     lastFetchSource = 'query-cache'
     return cached
+  }
+  const fromServer = await getServerIngredientQuery(ingredientNames, number, ranking)
+  if (fromServer) {
+    lastFetchSource = 'query-cache'
+    setIngredientQueryCache(ingredientNames, number, ranking, fromServer)
+    return fromServer
   }
 
   const apiKey = getApiKey()
@@ -452,6 +464,7 @@ export async function findRecipesByIngredients(
   }))
 
   setIngredientQueryCache(ingredientNames, number, ranking, results)
+  await setServerIngredientQuery(ingredientNames, number, ranking, results)
   lastFetchSource = 'network'
   return results
 }
@@ -463,12 +476,37 @@ export async function findRecipesByIngredients(
 // den lokalen Detail-Cache und den Rezept-Pool (aus früheren
 // complexSearch-Aufrufen) – oft ist das Rezept dort schon vollständig
 // vorhanden, dann kostet das Ansehen gar kein zusätzliches Kontingent.
+// Wichtig: Weder der Pool (aus complexSearch-Anfragen) noch ein älterer
+// Cache-Eintrag sind garantiert vollständig – Spoonaculars complexSearch
+// liefert selbst mit addRecipeInformation=true nicht immer vollständige
+// Zutatenlisten (extendedIngredients), im Gegensatz zum dedizierten
+// "/information"-Endpunkt hier. Eine Quelle mit leerer Zutatenliste wird
+// deshalb wie ein Cache-Fehltreffer behandelt, statt ein Rezept ohne
+// Zutaten anzuzeigen (das war der Bug: "bei den Zutaten wird nichts
+// angezeigt").
+function hasUsableIngredients(recipe: Recipe | null): recipe is Recipe {
+  return !!recipe && recipe.ingredients.length > 0
+}
+
 export async function getRecipeInformation(spoonacularId: string): Promise<Recipe> {
+  const fromServer = await getServerRecipeDetail(spoonacularId)
+  if (hasUsableIngredients(fromServer)) {
+    setCachedRecipeDetail(spoonacularId, fromServer)
+    return fromServer
+  }
+
   const fromPool = getPoolRecipeById(spoonacularId)
-  if (fromPool) return fromPool
+  if (hasUsableIngredients(fromPool)) {
+    setCachedRecipeDetail(spoonacularId, fromPool)
+    await setServerRecipeDetail(spoonacularId, fromPool)
+    return fromPool
+  }
 
   const cached = getCachedRecipeDetail(spoonacularId)
-  if (cached) return cached
+  if (hasUsableIngredients(cached)) {
+    await setServerRecipeDetail(spoonacularId, cached)
+    return cached
+  }
 
   const apiKey = getApiKey()
   if (!apiKey) {
@@ -490,5 +528,6 @@ export async function getRecipeInformation(spoonacularId: string): Promise<Recip
   const raw = (await res.json()) as SpoonacularRecipe
   const recipe = toRecipe(raw)
   setCachedRecipeDetail(spoonacularId, recipe)
+  await setServerRecipeDetail(spoonacularId, recipe)
   return recipe
 }

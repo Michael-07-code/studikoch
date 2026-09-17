@@ -5,6 +5,7 @@ import InventoryPage from './features/inventory/InventoryPage'
 import ShoppingListPage from './features/shopping-list/ShoppingListPage'
 import RecipesPage from './features/recipes/RecipesPage'
 import WochenplanPage from './features/mealplan/WochenplanPage'
+import SettingsPage from './features/settings/SettingsPage'
 import { AuthProvider, useAuth } from './lib/AuthProvider'
 import { hasSupabaseConfig } from './lib/supabaseClient'
 import SupabaseSetupNotice from './features/auth/SupabaseSetupNotice'
@@ -25,7 +26,7 @@ function AppRoutes() {
   }
 
   if (loading) {
-    return <p className="p-6 text-sm text-stone-500">Lade …</p>
+    return <p className="p-6 text-sm text-stone-400">Lade …</p>
   }
 
   if (!session) {
@@ -44,6 +45,7 @@ function AppRoutes() {
         <Route path="/einkaufsliste" element={<ShoppingListPage />} />
         <Route path="/rezepte" element={<RecipesPage />} />
         <Route path="/wochenplan" element={<WochenplanPage />} />
+        <Route path="/einstellungen" element={<SettingsPage />} />
       </Routes>
     </Layout>
   )

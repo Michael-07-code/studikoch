@@ -39,6 +39,8 @@ export default function InventoryPage() {
       <PageHeader
         title="Utensilien & Zutaten"
         description="Was du zum Kochen zur Verfügung hast – wird für passende Rezeptvorschläge genutzt."
+        icon="🧺"
+        tone="amber"
       />
 
       <TabBar tabs={tabs} active={tab} onChange={(id) => setTab(id as Tab)} />

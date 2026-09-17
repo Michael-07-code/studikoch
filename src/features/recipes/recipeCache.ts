@@ -1,5 +1,6 @@
 import type { BudgetRecipeSuggestion, IngredientMatchRecipe } from './spoonacular'
 import type { Recipe } from './types'
+import { supabase } from '../../lib/supabaseClient'
 
 // Lokaler Zwischenspeicher für Spoonacular-Ergebnisse (pro Browser/Gerät,
 // im localStorage). Zwei Zwecke, beide aus dem Nutzerwunsch "Rezepte lokal
@@ -181,6 +182,42 @@ export function getCachedRecipeDetail(id: string): Recipe | null {
   return entry.recipe
 }
 
+// Dauerhafter, geräteübergreifender Cache in Supabase (Tabelle
+// "recipe_cache", siehe supabase/schema.sql bzw. migration_2026_09.sql).
+// Ergänzt den localStorage-Cache oben (schnelle erste Stufe, aber nur auf
+// diesem Gerät gültig): einmal von irgendeinem Gerät abgefragte Rezepte
+// stehen damit auf allen Geräten dauerhaft zur Verfügung, ohne erneut das
+// (knappe) Spoonacular-Tageskontingent zu belasten. Fehler (z. B. offline,
+// kein Supabase konfiguriert) werden bewusst verschluckt – der Cache ist
+// immer nur eine Optimierung, nie eine Voraussetzung zum Funktionieren.
+export async function getServerRecipeDetail(id: string): Promise<Recipe | null> {
+  if (!supabase) return null
+  try {
+    const { data } = await supabase
+      .from('recipe_cache')
+      .select('recipe')
+      .eq('recipe_id', id)
+      .maybeSingle()
+    return (data?.recipe as Recipe | undefined) ?? null
+  } catch {
+    return null
+  }
+}
+
+export async function setServerRecipeDetail(id: string, recipe: Recipe): Promise<void> {
+  if (!supabase) return
+  try {
+    await supabase
+      .from('recipe_cache')
+      .upsert(
+        { recipe_id: id, recipe, cached_at: new Date().toISOString() },
+        { onConflict: 'recipe_id' },
+      )
+  } catch {
+    // s.o. – kein Cache ist kein Fehlerfall
+  }
+}
+
 export function setCachedRecipeDetail(id: string, recipe: Recipe): void {
   try {
     window.localStorage.setItem(
@@ -234,6 +271,50 @@ function buildIngredientQueryKey(
     .map((n) => n.trim().toLowerCase())
     .sort()
   return `${INGREDIENT_QUERY_PREFIX}${ranking}:${number}:${normalized.join(',')}`
+}
+
+// Dauerhafte, geräteübergreifende Variante des Zutaten-Suchcaches (siehe
+// Kommentar bei getServerRecipeDetail oben) – Tabelle
+// "ingredient_query_cache". Anders als der lokale Cache (2h TTL, da sich
+// das Inventar oft ändert) hat diese Variante keine Ablaufzeit: dieselbe
+// exakte Zutatenkombination liefert ohnehin fast immer dieselben
+// Spoonacular-Treffer, und "für immer speichern" war ausdrücklicher
+// Nutzerwunsch.
+export async function getServerIngredientQuery(
+  ingredientNames: string[],
+  number: number,
+  ranking: number,
+): Promise<IngredientMatchRecipe[] | null> {
+  if (!supabase) return null
+  try {
+    const key = buildIngredientQueryKey(ingredientNames, number, ranking)
+    const { data } = await supabase
+      .from('ingredient_query_cache')
+      .select('results')
+      .eq('query_key', key)
+      .maybeSingle()
+    return (data?.results as IngredientMatchRecipe[] | undefined) ?? null
+  } catch {
+    return null
+  }
+}
+
+export async function setServerIngredientQuery(
+  ingredientNames: string[],
+  number: number,
+  ranking: number,
+  results: IngredientMatchRecipe[],
+): Promise<void> {
+  if (!supabase) return
+  try {
+    const key = buildIngredientQueryKey(ingredientNames, number, ranking)
+    await supabase.from('ingredient_query_cache').upsert(
+      { query_key: key, results, cached_at: new Date().toISOString() },
+      { onConflict: 'query_key' },
+    )
+  } catch {
+    // s.o.
+  }
 }
 
 export function getIngredientQueryCache(

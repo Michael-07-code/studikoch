@@ -5,12 +5,16 @@ import { useAuth } from '../lib/AuthProvider'
 
 // Jeder Eintrag entspricht einem der Hauptbereiche der App.
 // "to" ist der Pfad, "label" der sichtbare Text in der Navigation.
+// Icons stimmen mit den PageHeader-Icons der jeweiligen Seite überein
+// (siehe components/ui.tsx SectionTone) – schnelleres Wiedererkennen beim
+// Überfliegen der Navigation, ohne dass jeder Bereich eine eigene
+// Akzentfarbe für Buttons/aktive Zustände bräuchte.
 const links = [
-  { to: '/', label: 'Start' },
-  { to: '/utensilien', label: 'Utensilien & Zutaten' },
-  { to: '/einkaufsliste', label: 'Einkaufsliste' },
-  { to: '/rezepte', label: 'Rezepte' },
-  { to: '/wochenplan', label: 'Wochenplan' },
+  { to: '/', label: 'Start', icon: '🏠' },
+  { to: '/utensilien', label: 'Utensilien & Zutaten', icon: '🧺' },
+  { to: '/einkaufsliste', label: 'Einkaufsliste', icon: '🛒' },
+  { to: '/rezepte', label: 'Rezepte', icon: '🍳' },
+  { to: '/wochenplan', label: 'Wochenplan', icon: '🗓️' },
 ]
 
 // Dunkle Leiste statt der bisherigen fast-weißen – dient als sichtbarer,
@@ -42,7 +46,7 @@ export default function NavBar() {
           to="/"
           className="mr-2 flex-1 text-lg font-extrabold tracking-tight text-emerald-400 transition-colors hover:text-emerald-300 lg:flex-none"
         >
-          StudiKoch
+          🍲 StudiKoch
         </Link>
 
         {/* Ab "lg" (Tablet quer/Desktop) genug Platz für alle Links in einer
@@ -57,7 +61,7 @@ export default function NavBar() {
               end={link.to === '/'}
               className={linkClass}
             >
-              {link.label}
+              {link.icon} {link.label}
             </NavLink>
           ))}
         </div>
@@ -68,6 +72,19 @@ export default function NavBar() {
               {session.user.email}
             </span>
           )}
+          <NavLink
+            to="/einstellungen"
+            aria-label="Einstellungen"
+            className={({ isActive }) =>
+              `rounded-xl p-2 text-sm font-medium transition-colors ${
+                isActive
+                  ? 'bg-emerald-600 text-white'
+                  : 'text-stone-300 hover:bg-stone-800 hover:text-white'
+              }`
+            }
+          >
+            ⚙️
+          </NavLink>
           <button
             onClick={() => supabase?.auth.signOut()}
             className="rounded-xl px-3 py-1.5 text-sm font-medium text-stone-300 hover:bg-stone-800 hover:text-white"
@@ -105,16 +122,18 @@ export default function NavBar() {
                 end={link.to === '/'}
                 className={linkClass}
               >
-                {link.label}
+                {link.icon} {link.label}
               </NavLink>
             ))}
           </div>
           <div className="mt-3 flex items-center justify-between gap-2 border-t border-stone-800 pt-3">
-            {session?.user.email && (
-              <span className="truncate text-xs text-stone-400">
-                {session.user.email}
-              </span>
-            )}
+            <NavLink
+              to="/einstellungen"
+              end
+              className="shrink-0 rounded-xl px-3 py-1.5 text-sm font-medium text-stone-300 hover:bg-stone-800 hover:text-white"
+            >
+              ⚙️ Einstellungen
+            </NavLink>
             <button
               onClick={() => supabase?.auth.signOut()}
               className="shrink-0 rounded-xl px-3 py-1.5 text-sm font-medium text-stone-300 hover:bg-stone-800 hover:text-white"
@@ -122,6 +141,11 @@ export default function NavBar() {
               Abmelden
             </button>
           </div>
+          {session?.user.email && (
+            <p className="mt-2 truncate text-xs text-stone-400">
+              {session.user.email}
+            </p>
+          )}
         </div>
       )}
     </nav>

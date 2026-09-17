@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import type { Recipe } from './types'
 import {
   getLastFetchSource,
+  getRecipeInformation,
   hasSpoonacularKey,
   searchBudgetRecipes,
   SpoonacularQuotaError,
@@ -50,13 +51,13 @@ export default function BudgetSearch() {
 
   if (!hasSpoonacularKey()) {
     return (
-      <Card className="text-sm text-stone-600">
+      <Card className="text-sm text-stone-300">
         Kein Spoonacular-API-Key gefunden. Kostenlos erstellen auf{' '}
         <a
           href="https://spoonacular.com/food-api"
           target="_blank"
           rel="noreferrer"
-          className="text-emerald-700 underline"
+          className="text-emerald-400 underline"
         >
           spoonacular.com/food-api
         </a>
@@ -122,11 +123,16 @@ export default function BudgetSearch() {
     setError(null)
     setServings(BASE_SERVINGS)
     try {
-      const translated = await translateRecipe(s.recipe)
+      // complexSearch (searchBudgetRecipes) liefert nicht immer vollständige
+      // Zutatenlisten – über getRecipeInformation() holen/cachen wir die
+      // vollständigen Details (siehe spoonacular.ts), statt das aus der
+      // Trefferliste unvollständige Rezept direkt anzuzeigen.
+      const full = await getRecipeInformation(s.recipe.id)
+      const translated = await translateRecipe(full)
       setSelected({
         recipe: translated,
-        prepTimeMinutes: s.prepTimeMinutes,
-        estimatedCostEuro: s.estimatedCostEuro,
+        prepTimeMinutes: full.prepTimeMinutes ?? s.prepTimeMinutes,
+        estimatedCostEuro: full.estimatedCostEuro ?? s.estimatedCostEuro,
       })
     } catch {
       setError('Rezept konnte nicht geladen werden.')
@@ -150,10 +156,10 @@ export default function BudgetSearch() {
         <Hint>📦 Kontingent aufgebraucht – zeige zwischengespeicherte Rezepte.</Hint>
       )}
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      {loading && <p className="text-sm text-stone-500">Suche …</p>}
+      {error && <p className="text-sm text-red-400">{error}</p>}
+      {loading && <p className="text-sm text-stone-400">Suche …</p>}
       {detailLoading && (
-        <p className="text-sm text-stone-500">Lade Rezeptdetails …</p>
+        <p className="text-sm text-stone-400">Lade Rezeptdetails …</p>
       )}
 
       {selected && !detailLoading && (
@@ -167,10 +173,11 @@ export default function BudgetSearch() {
               recipeToShoppingListInputs(selected.recipe, servings),
             )
           }
-          onSave={() =>
+          onSave={(mealType) =>
             savedRecipes.saveRecipe(selected.recipe, {
               prepTimeMinutes: selected.prepTimeMinutes ?? undefined,
               estimatedCostEuro: selected.estimatedCostEuro ?? undefined,
+              mealType,
             })
           }
           isSaved={savedRecipes.isSaved(selected.recipe.id)}
@@ -188,7 +195,7 @@ export default function BudgetSearch() {
               <button
                 key={s.recipe.id}
                 onClick={() => handleSelect(s)}
-                className="flex flex-col overflow-hidden rounded-2xl border border-stone-200/70 bg-white text-left shadow-card transition-shadow hover:shadow-card-hover"
+                className="flex flex-col overflow-hidden rounded-2xl border border-stone-700/70 bg-stone-900 text-left shadow-card transition-shadow hover:shadow-card-hover"
               >
                 {s.recipe.thumbnail && (
                   <img
@@ -199,10 +206,10 @@ export default function BudgetSearch() {
                   />
                 )}
                 <div className="p-3">
-                  <p className="text-sm font-medium text-stone-900">
+                  <p className="text-sm font-medium text-stone-100">
                     {displayNames[s.recipe.id] ?? s.recipe.name}
                   </p>
-                  <p className="mt-1 text-xs text-stone-500">
+                  <p className="mt-1 text-xs text-stone-400">
                     {[
                       s.prepTimeMinutes ? `${s.prepTimeMinutes} Min.` : null,
                       s.estimatedCostEuro !== null
@@ -213,7 +220,7 @@ export default function BudgetSearch() {
                       .join(' · ')}
                   </p>
                   {missing.length > 0 && (
-                    <p className="mt-1 text-xs text-red-600">
+                    <p className="mt-1 text-xs text-red-400">
                       Fehlt: {missing.map((m) => m.label).join(', ')}
                     </p>
                   )}

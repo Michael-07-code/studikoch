@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react'
 import { getRandomRecipe } from '../recipes/mealdb'
 import {
   getLastFetchSource,
+  getRecipeInformation,
   hasSpoonacularKey,
   searchBudgetRecipes,
   SpoonacularQuotaError,
@@ -14,7 +15,10 @@ import { canCookWithInventory, missingEquipment } from '../recipes/equipmentMatc
 import { useRecipePreferences } from '../recipes/useRecipePreferences'
 import RecipePreferencesPanel from '../recipes/RecipePreferencesPanel'
 import { useInventory } from '../inventory/useInventory'
+import { useAppSettings } from '../../lib/useAppSettings'
 import type { Recipe } from '../recipes/types'
+import type { MealType } from '../recipes/savedTypes'
+import MealTypeChooser from '../recipes/MealTypeChooser'
 import { useSavedRecipes } from '../recipes/useSavedRecipes'
 import { useShoppingList } from '../shopping-list/useShoppingList'
 import { recipeToShoppingListInputs } from '../recipes/toShoppingListItem'
@@ -37,7 +41,9 @@ export default function RecipeSwiper() {
   const { saveRecipe, isSaved } = useSavedRecipes()
   const { preferences } = useRecipePreferences()
   const { ownedEquipmentNames } = useInventory()
+  const { appSettings } = useAppSettings()
   const shoppingList = useShoppingList()
+  const [pickingMealType, setPickingMealType] = useState(false)
 
   const [queue, setQueue] = useState<Recipe[]>([])
   const [index, setIndex] = useState(0)
@@ -189,15 +195,24 @@ export default function RecipeSwiper() {
     advance(current.id)
   }
 
-  async function handleSave() {
+  async function handleSave(mealType: MealType) {
     if (!current) return
     setSaving(true)
     setError(null)
     try {
-      const full = await translateRecipe(current)
+      // Wie bei der Budget-Suche: complexSearch-Ergebnisse (dieser Vorschlag
+      // kommt von searchBudgetRecipes) haben nicht immer vollständige
+      // Zutatenlisten – vor dem Speichern die vollständigen Details holen
+      // (und dauerhaft cachen), damit gespeicherte Rezepte nie mit leerer
+      // Zutatenliste landen.
+      const complete = usingSpoonacular
+        ? await getRecipeInformation(current.id)
+        : current
+      const full = await translateRecipe(complete)
       saveRecipe(full, {
-        prepTimeMinutes: current.prepTimeMinutes,
-        estimatedCostEuro: current.estimatedCostEuro,
+        prepTimeMinutes: complete.prepTimeMinutes ?? current.prepTimeMinutes,
+        estimatedCostEuro: complete.estimatedCostEuro ?? current.estimatedCostEuro,
+        mealType,
       })
       advance(current.id)
     } catch {
@@ -210,19 +225,38 @@ export default function RecipeSwiper() {
   // Spielt die Ausflug-Animation in die jeweilige Richtung ab und ruft erst
   // danach die eigentliche Verwerfen/Speichern-Logik auf, damit der Wechsel
   // zur nächsten Karte nicht mitten in der Animation "reinspringt".
-  function commitSwipe(direction: 'left' | 'right') {
+  function commitSwipe(direction: 'left' | 'right', mealType: MealType = 'sonstiges') {
     if (exiting || saving || !current) return
     setDragging(false)
     setExiting(direction)
     setTimeout(() => {
       if (direction === 'right') {
-        handleSave()
+        handleSave(mealType)
       } else {
         handleDiscard()
       }
       setExiting(null)
       setDragX(0)
     }, 220)
+  }
+
+  // Speichern (per Herz-Button oder Wisch-Geste nach rechts) fragt zuerst
+  // nach der Mahlzeit, falls die Einstellung das vorsieht – erst danach
+  // läuft die Ausflug-Animation samt tatsächlichem Speichern.
+  function requestSave() {
+    if (exiting || saving || !current) return
+    if (appSettings.askMealTypeOnSave) {
+      setDragging(false)
+      setDragX(0)
+      setPickingMealType(true)
+    } else {
+      commitSwipe('right', 'sonstiges')
+    }
+  }
+
+  function handleMealTypePicked(mealType: MealType) {
+    setPickingMealType(false)
+    commitSwipe('right', mealType)
   }
 
   function handlePointerDown(e: PointerEvent<HTMLDivElement>) {
@@ -241,7 +275,7 @@ export default function RecipeSwiper() {
     if (!dragging) return
     setDragging(false)
     if (dragX > SWIPE_THRESHOLD) {
-      commitSwipe('right')
+      requestSave()
     } else if (dragX < -SWIPE_THRESHOLD) {
       commitSwipe('left')
     } else {
@@ -261,7 +295,10 @@ export default function RecipeSwiper() {
     if (!current) return
     setAddingToList(true)
     try {
-      const full = await translateRecipe(current)
+      const complete = usingSpoonacular
+        ? await getRecipeInformation(current.id)
+        : current
+      const full = await translateRecipe(complete)
       await shoppingList.addMany(
         recipeToShoppingListInputs(full, BASE_SERVINGS),
       )
@@ -277,7 +314,7 @@ export default function RecipeSwiper() {
   return (
     <div className="mx-auto max-w-sm space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold text-stone-900">
+        <h2 className="text-lg font-semibold text-stone-100">
           Rezepte entdecken
         </h2>
         <RecipePreferencesPanel showInventoryToggleInline />
@@ -292,8 +329,8 @@ export default function RecipeSwiper() {
         <Hint>📦 Kontingent aufgebraucht – zeige zwischengespeicherte Rezepte.</Hint>
       )}
 
-      {loading && <p className="text-sm text-stone-500">Lade Vorschlag …</p>}
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {loading && <p className="text-sm text-stone-400">Lade Vorschlag …</p>}
+      {error && <p className="text-sm text-red-400">{error}</p>}
 
       {!loading && current && (
         <div
@@ -369,10 +406,10 @@ export default function RecipeSwiper() {
             </div>
 
             <div className="space-y-2 p-4">
-              <p className="font-medium text-stone-900">
+              <p className="font-medium text-stone-100">
                 {cardDisplay?.displayName ?? current.name}
               </p>
-              <p className="text-xs text-stone-500">
+              <p className="text-xs text-stone-400">
                 {[cardDisplay?.displayCategory, cardDisplay?.displayArea]
                   .filter(Boolean)
                   .join(' · ')}
@@ -380,7 +417,7 @@ export default function RecipeSwiper() {
 
               {current.requiredEquipment &&
                 current.requiredEquipment.length > 0 && (
-                  <p className="text-xs text-stone-600">
+                  <p className="text-xs text-stone-300">
                     <span className="font-medium">Utensilien/Geräte: </span>
                     {current.requiredEquipment.map((eq, i) => {
                       const isMissing = missing.some(
@@ -389,7 +426,7 @@ export default function RecipeSwiper() {
                       return (
                         <span
                           key={eq.label}
-                          className={isMissing ? 'font-medium text-red-600' : ''}
+                          className={isMissing ? 'font-medium text-red-400' : ''}
                         >
                           {eq.label}
                           {i < current.requiredEquipment!.length - 1 ? ', ' : ''}
@@ -397,7 +434,7 @@ export default function RecipeSwiper() {
                       )
                     })}
                     {missing.length > 0 && (
-                      <span className="block text-red-600">
+                      <span className="block text-red-400">
                         Fehlt laut deinem Inventar – trag es unter
                         „Utensilien &amp; Zutaten" ein, falls vorhanden.
                       </span>
@@ -406,14 +443,14 @@ export default function RecipeSwiper() {
                 )}
 
               {cardDisplay && cardDisplay.ingredientNames.length > 0 && (
-                <p className="text-xs text-stone-600">
+                <p className="text-xs text-stone-300">
                   <span className="font-medium">Zutaten: </span>
                   {cardDisplay.ingredientNames.join(', ')}
                 </p>
               )}
             </div>
 
-            <div className="border-t border-stone-100 p-3 pb-0">
+            <div className="border-t border-stone-800 p-3 pb-0">
               <Button
                 variant="outline"
                 fullWidth
@@ -437,13 +474,13 @@ export default function RecipeSwiper() {
                 onClick={() => commitSwipe('left')}
                 disabled={saving}
                 aria-label="Verwerfen"
-                className="flex size-14 items-center justify-center rounded-full border-2 border-stone-200 bg-white text-2xl text-red-500 shadow-sm transition-all duration-150 hover:border-red-300 hover:bg-red-50 active:scale-90 disabled:opacity-50"
+                className="flex size-14 items-center justify-center rounded-full border-2 border-stone-700 bg-stone-900 text-2xl text-red-500 shadow-sm transition-all duration-150 hover:border-red-800 hover:bg-red-950/40 active:scale-90 disabled:opacity-50"
               >
                 ✕
               </button>
               <button
                 type="button"
-                onClick={() => commitSwipe('right')}
+                onClick={requestSave}
                 disabled={saving || isSaved(current.id)}
                 aria-label="Speichern"
                 className="flex size-16 items-center justify-center rounded-full bg-emerald-700 text-2xl text-white shadow-md shadow-emerald-950/25 transition-all duration-150 hover:bg-emerald-800 active:scale-90 disabled:opacity-50"
@@ -455,11 +492,18 @@ export default function RecipeSwiper() {
         </div>
       )}
 
+      {pickingMealType && (
+        <MealTypeChooser
+          onPick={handleMealTypePicked}
+          onCancel={() => setPickingMealType(false)}
+        />
+      )}
+
       <Hint>
         Verworfen ist nicht endgültig.{' '}
         <button
           onClick={handleResetDismissed}
-          className="text-emerald-700 underline"
+          className="text-emerald-400 underline"
         >
           Jetzt zurücksetzen
         </button>

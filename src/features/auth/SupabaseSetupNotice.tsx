@@ -4,8 +4,8 @@
  */
 export default function SupabaseSetupNotice() {
   return (
-    <div className="mx-auto max-w-lg space-y-4 rounded-lg border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">
-      <h1 className="text-lg font-semibold text-amber-900">
+    <div className="mx-auto max-w-lg space-y-4 rounded-2xl border border-amber-800 bg-amber-950/40 p-6 text-sm text-amber-300">
+      <h1 className="text-lg font-semibold text-amber-300">
         Supabase ist noch nicht eingerichtet
       </h1>
       <p>
@@ -44,7 +44,7 @@ export default function SupabaseSetupNotice() {
           Vite Umgebungsvariablen nur beim Start einliest.
         </li>
       </ol>
-      <p className="text-xs text-amber-700">
+      <p className="text-xs text-amber-400">
         Danach kannst du dich mit E-Mail und Passwort registrieren – deine
         Daten sind dann an dein Konto gebunden und auf jedem Gerät
         verfügbar, auf dem du dich anmeldest.

@@ -222,6 +222,8 @@ export default function WochenplanPage() {
       <PageHeader
         title="Wochenplan"
         description="Ein Rezeptvorschlag pro Mahlzeit und Tag, passend zu deinem Budget – einzelne Tage austauschbar."
+        icon="🗓️"
+        tone="violet"
       />
 
       <TabBar
@@ -234,14 +236,14 @@ export default function WochenplanPage() {
       />
 
       {tab === 'plan' && !hasSpoonacularKey() && (
-        <Card className="text-sm text-stone-600">
+        <Card className="text-sm text-stone-300">
           Der Wochenplan braucht einen Spoonacular-API-Key. Kostenlos
           erstellen auf{' '}
           <a
             href="https://spoonacular.com/food-api"
             target="_blank"
             rel="noreferrer"
-            className="text-emerald-700 underline"
+            className="text-emerald-400 underline"
           >
             spoonacular.com/food-api
           </a>
@@ -260,12 +262,12 @@ export default function WochenplanPage() {
                   ? 'Plan neu erstellen'
                   : 'Plan erstellen'}
             </Button>
-            <label className="flex items-center gap-2 text-sm text-stone-700">
+            <label className="flex items-center gap-2 text-sm text-stone-300">
               <input
                 type="checkbox"
                 checked={plan.mealPrepMode}
                 onChange={(e) => updatePlan({ mealPrepMode: e.target.checked })}
-                className="size-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500"
+                className="size-4 rounded border-stone-700 text-emerald-600 focus:ring-emerald-500"
               />
               Meal-Prep (wenige Gerichte wiederholen)
             </label>
@@ -285,7 +287,7 @@ export default function WochenplanPage() {
           {usingFallback && (
             <Hint>📦 Kontingent aufgebraucht – zeige zwischengespeicherte Rezepte.</Hint>
           )}
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-red-400">{error}</p>}
 
           {filledSlotCount > 0 && (
             <div className="flex flex-wrap items-center gap-3">
@@ -302,7 +304,7 @@ export default function WochenplanPage() {
           )}
           {listStatus && <Hint>{listStatus}</Hint>}
 
-          {viewLoading && <p className="text-sm text-stone-500">Lade Rezeptdetails …</p>}
+          {viewLoading && <p className="text-sm text-stone-400">Lade Rezeptdetails …</p>}
           {viewing && !viewLoading && (
             <RecipeDetail
               recipe={viewing}
@@ -312,7 +314,7 @@ export default function WochenplanPage() {
               onAddToShoppingList={() =>
                 shoppingList.addMany(recipeToShoppingListInputs(viewing, viewServings))
               }
-              onSave={() => savedRecipes.saveRecipe(viewing)}
+              onSave={(mealType) => savedRecipes.saveRecipe(viewing, { mealType })}
               isSaved={savedRecipes.isSaved(viewing.id)}
             />
           )}
@@ -327,19 +329,19 @@ export default function WochenplanPage() {
             <div className="space-y-3">
               {PLAN_DAYS.map((dayLabel, day) => (
                 <Card key={dayLabel} className="space-y-2">
-                  <h3 className="text-sm font-semibold text-stone-900">{dayLabel}</h3>
+                  <h3 className="text-sm font-semibold text-stone-100">{dayLabel}</h3>
                   <div className="grid gap-2 sm:grid-cols-3">
                     {MEAL_TYPES.map((mealType) => {
                       const slot = plan.slots[slotKey(day, mealType)]
                       return (
-                        <div key={mealType} className="rounded-xl bg-stone-50 p-2 text-xs">
-                          <p className="mb-1 font-medium text-stone-500">
+                        <div key={mealType} className="rounded-xl bg-stone-800 p-2 text-xs">
+                          <p className="mb-1 font-medium text-stone-400">
                             {MEAL_TYPE_LABELS[mealType]}
                           </p>
                           {slot ? (
                             <div className="space-y-1">
-                              <p className="text-sm text-stone-900">{slot.recipeName}</p>
-                              <p className="text-stone-500">
+                              <p className="text-sm text-stone-100">{slot.recipeName}</p>
+                              <p className="text-stone-400">
                                 {[
                                   slot.prepTimeMinutes ? `${slot.prepTimeMinutes} Min.` : null,
                                   slot.estimatedCostEuro !== undefined
@@ -352,20 +354,20 @@ export default function WochenplanPage() {
                               <div className="flex gap-2 pt-1">
                                 <button
                                   onClick={() => handleView(slot)}
-                                  className="text-emerald-700 underline"
+                                  className="text-emerald-400 underline"
                                 >
                                   Ansehen
                                 </button>
                                 <button
                                   onClick={() => handleSwap(day, mealType)}
-                                  className="text-stone-500 underline"
+                                  className="text-stone-400 underline"
                                 >
                                   Tauschen
                                 </button>
                               </div>
                             </div>
                           ) : (
-                            <p className="text-stone-400">–</p>
+                            <p className="text-stone-500">–</p>
                           )}
                         </div>
                       )
