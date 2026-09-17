@@ -1,0 +1,129 @@
+import { useEffect, useState } from 'react'
+import { Link, NavLink, useLocation } from 'react-router'
+import { supabase } from '../lib/supabaseClient'
+import { useAuth } from '../lib/AuthProvider'
+
+// Jeder Eintrag entspricht einem der Hauptbereiche der App.
+// "to" ist der Pfad, "label" der sichtbare Text in der Navigation.
+const links = [
+  { to: '/', label: 'Start' },
+  { to: '/utensilien', label: 'Utensilien & Zutaten' },
+  { to: '/einkaufsliste', label: 'Einkaufsliste' },
+  { to: '/rezepte', label: 'Rezepte' },
+  { to: '/wochenplan', label: 'Wochenplan' },
+]
+
+// Dunkle Leiste statt der bisherigen fast-weißen – dient als sichtbarer,
+// gleichbleibender "Rahmen" der App und liefert den Hauptteil des
+// gewünschten dunkleren/kontrastreicheren Gesamteindrucks, ohne dass jede
+// einzelne Seite dafür umgebaut werden muss.
+const linkClass = ({ isActive }: { isActive: boolean }) =>
+  `rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
+    isActive
+      ? 'bg-emerald-600 text-white'
+      : 'text-stone-300 hover:bg-stone-800 hover:text-white'
+  }`
+
+export default function NavBar() {
+  const { session } = useAuth()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const location = useLocation()
+
+  // Menü nach jedem Seitenwechsel automatisch schließen, sonst bleibt es auf
+  // dem Handy/Tablet nach dem Antippen eines Links offen stehen.
+  useEffect(() => {
+    setMenuOpen(false)
+  }, [location.pathname])
+
+  return (
+    <nav className="sticky top-0 z-20 border-b border-stone-800 bg-stone-900/95 backdrop-blur">
+      <div className="mx-auto flex max-w-4xl items-center gap-1 px-4 py-3">
+        <Link
+          to="/"
+          className="mr-2 flex-1 text-lg font-extrabold tracking-tight text-emerald-400 transition-colors hover:text-emerald-300 lg:flex-none"
+        >
+          StudiKoch
+        </Link>
+
+        {/* Ab "lg" (Tablet quer/Desktop) genug Platz für alle Links in einer
+            Zeile – darunter (Handy und Tablet hochkant) ein Hamburger-Menü,
+            damit die Navigation nicht mehr in mehrere unübersichtliche
+            Zeilen umbricht. */}
+        <div className="hidden flex-1 items-center gap-1 lg:flex">
+          {links.map((link) => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              end={link.to === '/'}
+              className={linkClass}
+            >
+              {link.label}
+            </NavLink>
+          ))}
+        </div>
+
+        <div className="hidden items-center gap-2 lg:flex">
+          {session?.user.email && (
+            <span className="hidden text-xs text-stone-400 xl:inline">
+              {session.user.email}
+            </span>
+          )}
+          <button
+            onClick={() => supabase?.auth.signOut()}
+            className="rounded-xl px-3 py-1.5 text-sm font-medium text-stone-300 hover:bg-stone-800 hover:text-white"
+          >
+            Abmelden
+          </button>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setMenuOpen((open) => !open)}
+          aria-expanded={menuOpen}
+          aria-label={menuOpen ? 'Menü schließen' : 'Menü öffnen'}
+          className="rounded-xl p-2 text-stone-300 hover:bg-stone-800 hover:text-white lg:hidden"
+        >
+          {menuOpen ? (
+            <span className="block text-xl leading-none">✕</span>
+          ) : (
+            <span className="block space-y-1">
+              <span className="block h-0.5 w-5 bg-current" />
+              <span className="block h-0.5 w-5 bg-current" />
+              <span className="block h-0.5 w-5 bg-current" />
+            </span>
+          )}
+        </button>
+      </div>
+
+      {menuOpen && (
+        <div className="border-t border-stone-800 px-4 py-3 lg:hidden">
+          <div className="flex flex-col gap-1">
+            {links.map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                end={link.to === '/'}
+                className={linkClass}
+              >
+                {link.label}
+              </NavLink>
+            ))}
+          </div>
+          <div className="mt-3 flex items-center justify-between gap-2 border-t border-stone-800 pt-3">
+            {session?.user.email && (
+              <span className="truncate text-xs text-stone-400">
+                {session.user.email}
+              </span>
+            )}
+            <button
+              onClick={() => supabase?.auth.signOut()}
+              className="shrink-0 rounded-xl px-3 py-1.5 text-sm font-medium text-stone-300 hover:bg-stone-800 hover:text-white"
+            >
+              Abmelden
+            </button>
+          </div>
+        </div>
+      )}
+    </nav>
+  )
+}

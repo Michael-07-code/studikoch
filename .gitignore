@@ -1,0 +1,22 @@
+# Abhängigkeiten
+node_modules
+
+# Build-Ausgabe
+dist
+dist-ssr
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+
+# Logs
+*.log
+npm-debug.log*
+
+# Umgebungsvariablen (Supabase-Keys etc. NICHT einchecken)
+.env
+.env.local
+
+# Betriebssystem
+.DS_Store

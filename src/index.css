@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+/* Modernes Design-System: eigene Schrift, weichere Flächenfarbe und ein
+   paar wiederverwendbare Tokens (Schatten/Radius), auf die die UI-
+   Bausteine in components/ui.tsx zurückgreifen. Die Funktionsfarbe bleibt
+   bewusst im Emerald-Grünton (Tailwind-Standardpalette), nur Nuancen und
+   Umgebung wirken damit hochwertiger/ruhiger als das ursprüngliche
+   Standard-Tailwind-Grau.
+*/
+@theme {
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  /* Etwas kräftiger als vorher (mehr Deckkraft/Ausbreitung), damit sich
+     weiße Karten sichtbarer vom Hintergrund abheben statt optisch mit ihm
+     zu verschmelzen – Teil des "kontrastreicher"-Wunsches. */
+  --shadow-card: 0 1px 2px 0 rgb(41 37 30 / 0.08), 0 2px 5px 0 rgb(41 37 30 / 0.10);
+  --shadow-card-hover: 0 10px 20px -4px rgb(41 37 30 / 0.16), 0 4px 8px -2px rgb(41 37 30 / 0.10);
+}
+
+/* Spürbar kräftiger/dunkler als der vorherige, fast weiße Creme-Ton – dient
+   als sichtbarer Kontrastgrund, vor dem sich weiße Karten klar abzeichnen,
+   statt optisch mit dem Hintergrund zu verschmelzen. Bleibt hell genug,
+   damit Fließtext (auch der helle "Hint"-Text) überall lesbar bleibt; den
+   "dunkleren, kontrastreicheren" Eindruck liefert vor allem die neue
+   dunkle Navigationsleiste (siehe NavBar) plus das kräftigere Grün. */
+body {
+  background-color: #ddd4bd;
+  background-image: linear-gradient(180deg, #cdc0a0 0%, #e4dac0 380px, #ece4d2 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
