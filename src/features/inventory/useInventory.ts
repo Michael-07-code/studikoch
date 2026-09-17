@@ -32,6 +32,10 @@ export function useInventory() {
     ingredientsTable.insert(item)
   }
 
+  function updateIngredient(id: string, patch: Partial<Omit<IngredientItem, 'id'>>) {
+    ingredientsTable.update(id, patch)
+  }
+
   function removeIngredient(id: string) {
     ingredientsTable.remove(id)
   }
@@ -52,6 +56,7 @@ export function useInventory() {
     addAppliance,
     removeAppliance,
     addIngredient,
+    updateIngredient,
     removeIngredient,
     ownedEquipmentNames,
     loading:
