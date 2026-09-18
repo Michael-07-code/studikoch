@@ -5,8 +5,9 @@ import {
   getRecipeInformation,
   hasSpoonacularKey,
   SpoonacularQuotaError,
-  type IngredientMatchRecipe,
 } from './spoonacular'
+import { findRecipesByIngredientsFallback, getRecipeById } from './mealdb'
+import { isSpoonacularId } from './recipeSource'
 import { translateRecipe } from './translateRecipe'
 import { translateMany, translateText } from '../../lib/translate'
 import { recipeToShoppingListInputs } from './toShoppingListItem'
@@ -14,7 +15,7 @@ import { useSavedRecipes } from './useSavedRecipes'
 import { useShoppingList } from '../shopping-list/useShoppingList'
 import { useInventory } from '../inventory/useInventory'
 import RecipeDetail from './RecipeDetail'
-import type { Recipe } from './types'
+import type { IngredientMatchRecipe, Recipe } from './types'
 import { BASE_SERVINGS } from './scaleMeasure'
 import { Badge, Button, Card, EmptyState, Hint } from '../../components/ui'
 
@@ -24,10 +25,14 @@ interface DisplayInfo {
   missedTranslated: string[]
 }
 
+const RESULT_COUNT = 9
+
 // "Was kann ich kochen?": nutzt die im Inventar hinterlegten Zutaten direkt
 // (kein manuelles Eintippen wie im "Nach Zutat"-Reiter) und lässt
 // Spoonacular danach ranken, welche Rezepte davon am meisten verwenden.
-// Zeigt zu jedem Vorschlag, was noch fehlt.
+// Zeigt zu jedem Vorschlag, was noch fehlt. Fällt bei aufgebrauchtem
+// Spoonacular-Tageskontingent automatisch auf die kostenlose TheMealDB-
+// Ausweichquelle zurück (vorher gab es dort keinen Ersatz).
 export default function CookFromInventory() {
   const { ingredients } = useInventory()
   const savedRecipes = useSavedRecipes()
@@ -44,6 +49,7 @@ export default function CookFromInventory() {
   const [servings, setServings] = useState(BASE_SERVINGS)
   const [hasSearched, setHasSearched] = useState(false)
   const [fromCache, setFromCache] = useState(false)
+  const [usingFallback, setUsingFallback] = useState(false)
 
   const ingredientNames = ingredients.map((i) => i.name)
 
@@ -70,9 +76,24 @@ export default function CookFromInventory() {
     setError(null)
     setSelected(null)
     setHasSearched(true)
+    setUsingFallback(false)
     try {
-      const results = await findRecipesByIngredients(ingredientNames, 9)
-      setFromCache(getLastFetchSource() === 'query-cache')
+      let results: IngredientMatchRecipe[]
+      try {
+        results = await findRecipesByIngredients(ingredientNames, RESULT_COUNT)
+        setFromCache(getLastFetchSource() === 'query-cache')
+      } catch (err) {
+        if (!(err instanceof SpoonacularQuotaError)) throw err
+        // Kontingent aufgebraucht: über die kostenlose TheMealDB-
+        // Ausweichquelle weitersuchen, statt die Suche ganz scheitern zu
+        // lassen.
+        setUsingFallback(true)
+        setFromCache(false)
+        results = await findRecipesByIngredientsFallback(
+          ingredientNames,
+          RESULT_COUNT,
+        )
+      }
       setMatches(results)
       if (results.length === 0) {
         setError('Keine passenden Rezepte gefunden.')
@@ -91,14 +112,8 @@ export default function CookFromInventory() {
         }),
       )
       setDisplayInfo(Object.fromEntries(pairs))
-    } catch (err) {
-      if (err instanceof SpoonacularQuotaError) {
-        setError(
-          'Spoonacular-Kontingent für heute aufgebraucht. Versuche es morgen wieder.',
-        )
-      } else {
-        setError('Die Suche ist fehlgeschlagen. Prüfe deine Internetverbindung.')
-      }
+    } catch {
+      setError('Die Suche ist fehlgeschlagen. Prüfe deine Internetverbindung.')
     } finally {
       setLoading(false)
     }
@@ -109,7 +124,10 @@ export default function CookFromInventory() {
     setError(null)
     setServings(BASE_SERVINGS)
     try {
-      const raw = await getRecipeInformation(match.id)
+      const raw = isSpoonacularId(match.id)
+        ? await getRecipeInformation(match.id)
+        : await getRecipeById(match.id)
+      if (!raw) throw new Error('Rezept nicht gefunden.')
       setSelected(await translateRecipe(raw))
     } catch (err) {
       if (err instanceof SpoonacularQuotaError) {
@@ -143,6 +161,13 @@ export default function CookFromInventory() {
       {fromCache && !error && (
         <Hint>📦 Zwischengespeichertes Ergebnis (spart Tageskontingent).</Hint>
       )}
+      {usingFallback && !error && (
+        <Hint>
+          📦 Spoonacular-Kontingent aufgebraucht – diese Vorschläge stammen
+          aus einer zweiten, kostenlosen Rezeptquelle ohne Preis-/
+          Zeitangabe.
+        </Hint>
+      )}
       {detailLoading && <p className="text-sm text-stone-500 dark:text-stone-400">Lade Rezeptdetails …</p>}
 
       {selected && !detailLoading && (
@@ -173,7 +198,9 @@ export default function CookFromInventory() {
               >
                 {m.thumbnail && (
                   <img
-                    src={m.thumbnail}
+                    src={
+                      isSpoonacularId(m.id) ? m.thumbnail : `${m.thumbnail}/medium`
+                    }
                     alt={info?.name ?? m.name}
                     className="h-20 w-20 shrink-0 rounded-xl object-cover"
                     loading="lazy"

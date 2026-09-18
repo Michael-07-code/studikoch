@@ -5,8 +5,9 @@ import {
   getRecipeInformation,
   hasSpoonacularKey,
   SpoonacularQuotaError,
-  type IngredientMatchRecipe,
 } from './spoonacular'
+import { findRecipesByIngredientsFallback, getRecipeById } from './mealdb'
+import { isSpoonacularId } from './recipeSource'
 import { translateRecipe } from './translateRecipe'
 import { translateText, translateMany } from '../../lib/translate'
 import { recipeToShoppingListInputs } from './toShoppingListItem'
@@ -14,9 +15,9 @@ import { useSavedRecipes } from './useSavedRecipes'
 import { useShoppingList } from '../shopping-list/useShoppingList'
 import { useInventory } from '../inventory/useInventory'
 import RecipeDetail from './RecipeDetail'
-import type { Recipe } from './types'
+import type { IngredientMatchRecipe, Recipe } from './types'
 import { BASE_SERVINGS } from './scaleMeasure'
-import { Badge, Button, Card, Hint } from '../../components/ui'
+import { Badge, Button, Card, EmptyState, Hint } from '../../components/ui'
 
 interface DisplayInfo {
   name: string
@@ -24,11 +25,15 @@ interface DisplayInfo {
   missedTranslated: string[]
 }
 
+const RESULT_COUNT = 8
+
 // "Was muss weg?": der Nutzer wählt aus, welche Zutaten bald ablaufen bzw.
-// aufgebraucht werden sollen, und bekommt einen großen, prominenten
-// Rezeptvorschlag, der möglichst viele davon verwertet (statt einer langen
-// Ergebnisliste – genau ein Hauptvorschlag, mit ein paar Alternativen zum
-// Durchblättern darunter).
+// aufgebraucht werden sollen, und bekommt mehrere Rezeptvorschläge
+// (Nutzerwunsch: mehrere Auswahlmöglichkeiten statt nur eines einzelnen
+// Vorschlags) zum Durchstöbern, die möglichst viele davon verwerten.
+// Nutzt Spoonacular, fällt bei aufgebrauchtem Tageskontingent automatisch
+// auf die kostenlose TheMealDB-Ausweichquelle zurück (vorher gab es dort
+// gar keinen Ersatz – die Suche schlug in dem Fall komplett fehl).
 export default function UseItUpFinder() {
   const { ingredients } = useInventory()
   const savedRecipes = useSavedRecipes()
@@ -44,8 +49,8 @@ export default function UseItUpFinder() {
   const [displayInfo, setDisplayInfo] = useState<Record<string, DisplayInfo>>(
     {},
   )
-  const [activeIndex, setActiveIndex] = useState(0)
   const [fromCache, setFromCache] = useState(false)
+  const [usingFallback, setUsingFallback] = useState(false)
 
   const [recipe, setRecipe] = useState<Recipe | null>(null)
   const [recipeLoading, setRecipeLoading] = useState(false)
@@ -86,44 +91,53 @@ export default function UseItUpFinder() {
     setCustomInput('')
   }
 
+  async function describeMatches(results: IngredientMatchRecipe[]) {
+    const pairs = await Promise.all(
+      results.map(async (r) => {
+        const [name, used, missed] = await Promise.all([
+          translateText(r.name),
+          translateMany(r.usedIngredients),
+          translateMany(r.missedIngredients),
+        ])
+        return [
+          r.id,
+          { name, usedTranslated: used, missedTranslated: missed },
+        ] as const
+      }),
+    )
+    setDisplayInfo(Object.fromEntries(pairs))
+  }
+
   async function handleSearch() {
     const names = Array.from(selected)
     if (names.length === 0) return
     setLoading(true)
     setError(null)
     setRecipe(null)
-    setActiveIndex(0)
+    setUsingFallback(false)
     try {
-      const results = await findRecipesByIngredients(names, 5, 1)
-      setFromCache(getLastFetchSource() === 'query-cache')
+      let results: IngredientMatchRecipe[]
+      try {
+        results = await findRecipesByIngredients(names, RESULT_COUNT, 1)
+        setFromCache(getLastFetchSource() === 'query-cache')
+      } catch (err) {
+        if (!(err instanceof SpoonacularQuotaError)) throw err
+        // Kontingent aufgebraucht: über die kostenlose TheMealDB-
+        // Ausweichquelle weitersuchen, statt die Suche ganz scheitern zu
+        // lassen.
+        setUsingFallback(true)
+        setFromCache(false)
+        results = await findRecipesByIngredientsFallback(names, RESULT_COUNT)
+      }
       setMatches(results)
       if (results.length === 0) {
         setError(
           'Kein passendes Rezept gefunden. Versuche es mit weniger oder anderen Zutaten.',
         )
       }
-      const pairs = await Promise.all(
-        results.map(async (r) => {
-          const [name, used, missed] = await Promise.all([
-            translateText(r.name),
-            translateMany(r.usedIngredients),
-            translateMany(r.missedIngredients),
-          ])
-          return [
-            r.id,
-            { name, usedTranslated: used, missedTranslated: missed },
-          ] as const
-        }),
-      )
-      setDisplayInfo(Object.fromEntries(pairs))
-    } catch (err) {
-      if (err instanceof SpoonacularQuotaError) {
-        setError(
-          'Spoonacular-Kontingent für heute aufgebraucht. Versuche es morgen wieder.',
-        )
-      } else {
-        setError('Die Suche ist fehlgeschlagen. Prüfe deine Internetverbindung.')
-      }
+      await describeMatches(results)
+    } catch {
+      setError('Die Suche ist fehlgeschlagen. Prüfe deine Internetverbindung.')
     } finally {
       setLoading(false)
     }
@@ -134,7 +148,10 @@ export default function UseItUpFinder() {
     setError(null)
     setServings(BASE_SERVINGS)
     try {
-      const raw = await getRecipeInformation(match.id)
+      const raw = isSpoonacularId(match.id)
+        ? await getRecipeInformation(match.id)
+        : await getRecipeById(match.id)
+      if (!raw) throw new Error('Rezept nicht gefunden.')
       setRecipe(await translateRecipe(raw))
     } catch (err) {
       if (err instanceof SpoonacularQuotaError) {
@@ -147,14 +164,11 @@ export default function UseItUpFinder() {
     }
   }
 
-  const active = matches[activeIndex]
-  const activeInfo = active ? displayInfo[active.id] : undefined
-
   return (
     <div className="space-y-4">
       <Hint>
-        Wähle, was bald weg muss – du bekommst einen großen Rezeptvorschlag,
-        der das möglichst gut verwertet.
+        Wähle, was bald weg muss – du bekommst mehrere Rezeptvorschläge, die
+        das möglichst gut verwerten.
       </Hint>
 
       {ingredients.length > 0 && (
@@ -211,12 +225,19 @@ export default function UseItUpFinder() {
       </div>
 
       <Button onClick={handleSearch} disabled={loading || selected.size === 0}>
-        {loading ? 'Suche …' : `Rezeptvorschlag (${selected.size} Zutat(en))`}
+        {loading ? 'Suche …' : `Rezeptvorschläge (${selected.size} Zutat(en))`}
       </Button>
 
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
       {fromCache && !error && (
         <Hint>📦 Zwischengespeichertes Ergebnis (spart Tageskontingent).</Hint>
+      )}
+      {usingFallback && !error && (
+        <Hint>
+          📦 Spoonacular-Kontingent aufgebraucht – diese Vorschläge stammen
+          aus einer zweiten, kostenlosen Rezeptquelle ohne Preis-/
+          Zeitangabe.
+        </Hint>
       )}
       {recipeLoading && <p className="text-sm text-stone-500 dark:text-stone-400">Lade Rezeptdetails …</p>}
 
@@ -234,51 +255,57 @@ export default function UseItUpFinder() {
         />
       )}
 
-      {!recipe && !recipeLoading && !loading && active && (
-        <Card padded={false} className="overflow-hidden">
-          {active.thumbnail && (
-            <img
-              src={active.thumbnail}
-              alt={activeInfo?.name ?? active.name}
-              className="h-48 w-full object-cover"
-            />
-          )}
-          <div className="space-y-2 p-4">
-            <p className="text-lg font-semibold text-stone-900 dark:text-stone-100">
-              {activeInfo?.name ?? active.name}
-            </p>
-            {activeInfo && activeInfo.usedTranslated.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {activeInfo.usedTranslated.map((name) => (
-                  <Badge key={name} tone="brand">
-                    ✓ {name}
-                  </Badge>
-                ))}
-              </div>
-            )}
-            {activeInfo && activeInfo.missedTranslated.length > 0 && (
-              <p className="text-sm text-amber-700 dark:text-amber-400">
-                Fehlt noch: {activeInfo.missedTranslated.join(', ')}
-              </p>
-            )}
-            <div className="flex gap-2 pt-2">
-              <Button size="sm" onClick={() => handleViewRecipe(active)}>
-                Rezept ansehen
-              </Button>
-              {matches.length > 1 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setActiveIndex((i) => (i + 1) % matches.length)
-                  }
-                >
-                  Anderen Vorschlag
-                </Button>
-              )}
-            </div>
-          </div>
-        </Card>
+      {!recipe && !recipeLoading && !loading && matches.length === 0 && !error && (
+        <EmptyState>
+          Zutaten oben auswählen und auf „Rezeptvorschläge" klicken.
+        </EmptyState>
+      )}
+
+      {!recipe && !recipeLoading && !loading && matches.length > 0 && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {matches.map((match) => {
+            const info = displayInfo[match.id]
+            return (
+              <button
+                key={match.id}
+                onClick={() => handleViewRecipe(match)}
+                className="flex gap-3 overflow-hidden rounded-2xl border border-stone-200/70 dark:border-stone-700/70 bg-white dark:bg-stone-900 p-3 text-left shadow-card transition-shadow hover:shadow-card-hover"
+              >
+                {match.thumbnail && (
+                  <img
+                    src={
+                      isSpoonacularId(match.id)
+                        ? match.thumbnail
+                        : `${match.thumbnail}/medium`
+                    }
+                    alt={info?.name ?? match.name}
+                    className="h-20 w-20 shrink-0 rounded-xl object-cover"
+                    loading="lazy"
+                  />
+                )}
+                <div className="min-w-0 space-y-1">
+                  <p className="truncate text-sm font-medium text-stone-900 dark:text-stone-100">
+                    {info?.name ?? match.name}
+                  </p>
+                  {info && info.usedTranslated.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {info.usedTranslated.map((name) => (
+                        <Badge key={name} tone="brand">
+                          ✓ {name}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  {info && info.missedTranslated.length > 0 && (
+                    <p className="text-xs text-amber-700 dark:text-amber-400">
+                      Fehlt: {info.missedTranslated.join(', ')}
+                    </p>
+                  )}
+                </div>
+              </button>
+            )
+          })}
+        </div>
       )}
     </div>
   )

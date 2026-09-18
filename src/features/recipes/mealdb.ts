@@ -1,4 +1,9 @@
-import type { Recipe, RecipeIngredient, RecipeSummary } from './types'
+import type {
+  IngredientMatchRecipe,
+  Recipe,
+  RecipeIngredient,
+  RecipeSummary,
+} from './types'
 import { isStudentFriendly } from './simpleFilter'
 
 // TheMealDB: kostenlos nutzbar mit dem öffentlichen Test-Key "1".
@@ -189,4 +194,68 @@ export async function getRandomRecipe(): Promise<Recipe | null> {
   )
   const meal = data.meals?.[0]
   return meal ? toRecipe(meal) : null
+}
+
+// Kostenlose Ausweichquelle für "Was muss weg?"/"Was kann ich kochen?", wenn
+// Spoonaculars findByIngredients-Kontingent aufgebraucht ist (vorher gab es
+// dort gar keinen Fallback – die Suche schlug komplett fehl). TheMealDB kann
+// nur nach jeweils einer Zutat gleichzeitig filtern, deshalb wird hier pro
+// gewünschter Zutat einzeln gefiltert und gezählt, in wie vielen Treffern ein
+// Rezept jeweils vorkommt – eine grobe, aber kostenlose Näherung an
+// Spoonaculars "möglichst viele der Zutaten verwenden"-Ranking.
+export async function findRecipesByIngredientsFallback(
+  ingredientNames: string[],
+  count: number,
+): Promise<IngredientMatchRecipe[]> {
+  if (ingredientNames.length === 0) return []
+
+  const hitCounts = new Map<string, { summary: RecipeSummary; count: number }>()
+  await Promise.all(
+    ingredientNames.map(async (ingredient) => {
+      try {
+        const summaries = await filterRecipesByIngredient(ingredient)
+        for (const s of summaries) {
+          const entry = hitCounts.get(s.id)
+          if (entry) entry.count++
+          else hitCounts.set(s.id, { summary: s, count: 1 })
+        }
+      } catch {
+        // Diese Zutat überspringen, mit den übrigen weitermachen.
+      }
+    }),
+  )
+
+  const ranked = Array.from(hitCounts.values()).sort((a, b) => b.count - a.count)
+  // Mehr Kandidaten laden als gebraucht, da danach noch der
+  // "studententauglich"-Filter greift (siehe simpleFilter.ts).
+  const candidates = ranked.slice(0, count * 3)
+
+  const recipes = await Promise.all(
+    candidates.map((c) => getRecipeById(c.summary.id).catch(() => null)),
+  )
+  const loaded = recipes.filter((r): r is Recipe => r !== null)
+  const filtered = loaded.filter(isStudentFriendly)
+  const chosen = (filtered.length > 0 ? filtered : loaded).slice(0, count)
+
+  return chosen.map((recipe) => {
+    const recipeIngredientNames = recipe.ingredients.map((i) =>
+      i.name.toLowerCase(),
+    )
+    const usedIngredients = ingredientNames.filter((name) => {
+      const normalized = name.trim().toLowerCase()
+      return recipeIngredientNames.some(
+        (rn) => rn.includes(normalized) || normalized.includes(rn),
+      )
+    })
+    const missedIngredients = ingredientNames.filter(
+      (name) => !usedIngredients.includes(name),
+    )
+    return {
+      id: recipe.id,
+      name: recipe.name,
+      thumbnail: recipe.thumbnail,
+      usedIngredients,
+      missedIngredients,
+    }
+  })
 }

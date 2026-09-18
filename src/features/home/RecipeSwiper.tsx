@@ -15,15 +15,23 @@ import { useRecipePreferences } from '../recipes/useRecipePreferences'
 import RecipePreferencesPanel from '../recipes/RecipePreferencesPanel'
 import { useInventory } from '../inventory/useInventory'
 import { useAppSettings } from '../../lib/useAppSettings'
+import { useLocalStorage } from '../../lib/useLocalStorage'
 import type { Recipe } from '../recipes/types'
 import type { MealType } from '../recipes/savedTypes'
 import MealTypeChooser from '../recipes/MealTypeChooser'
 import NutritionTable from '../recipes/NutritionTable'
 import { useSavedRecipes } from '../recipes/useSavedRecipes'
-import { useShoppingList } from '../shopping-list/useShoppingList'
-import { recipeToShoppingListInputs } from '../recipes/toShoppingListItem'
 import { BASE_SERVINGS } from '../recipes/scaleMeasure'
 import { Button, Card, Hint } from '../../components/ui'
+
+// Wie viele zuletzt gesehene (verworfene oder gespeicherte) Rezept-IDs sich
+// die App merkt, um sie nicht sofort wieder vorzuschlagen – dauerhaft im
+// Browser gespeichert (siehe seenIdsArray unten), nicht nur für die aktuelle
+// Sitzung. Vorher wurde diese Liste bei jedem Neuladen der Seite geleert,
+// wodurch (kombiniert mit dem knappen Spoonacular-Tageskontingent und
+// TheMealDBs kleinem kostenlosen Datensatz) sehr schnell wieder dieselben
+// Rezepte auftauchten.
+const MAX_REMEMBERED_IDS = 500
 
 interface CardDisplay {
   displayName: string
@@ -42,21 +50,22 @@ export default function RecipeSwiper() {
   const { preferences } = useRecipePreferences()
   const { ownedEquipmentNames } = useInventory()
   const { appSettings } = useAppSettings()
-  const shoppingList = useShoppingList()
   const [pickingMealType, setPickingMealType] = useState(false)
 
   const [queue, setQueue] = useState<Recipe[]>([])
   const [index, setIndex] = useState(0)
-  // Nur für diese Sitzung gemerkt (kein localStorage) – verworfene Rezepte
-  // sollen nicht für immer verschwinden, sondern nur nicht sofort wieder
-  // auftauchen. Ein Reload oder Klick auf "Zurücksetzen" macht sie wieder
-  // sichtbar.
-  const [seenIds, setSeenIds] = useState<Set<string>>(new Set())
+  // Dauerhaft im Browser gespeichert (nicht nur für die aktuelle Sitzung) –
+  // verworfene oder gespeicherte Rezepte sollen nicht für immer verschwinden,
+  // aber auch nicht schon beim nächsten Neuladen der Seite wieder ganz oben
+  // auftauchen. Ein Klick auf "Zurücksetzen" macht sie wieder sichtbar.
+  const [seenIdsArray, setSeenIdsArray] = useLocalStorage<string[]>(
+    'studikoch-tinder-seen',
+    [],
+  )
+  const seenIds = useMemo(() => new Set(seenIdsArray), [seenIdsArray])
   const [cardDisplay, setCardDisplay] = useState<CardDisplay | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [addingToList, setAddingToList] = useState(false)
-  const [justAddedId, setJustAddedId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   // Swipe-Geste: "dragX" folgt live dem Finger/der Maus, "exiting" spielt
@@ -198,7 +207,12 @@ export default function RecipeSwiper() {
     const nextSeen = dismissedId
       ? new Set(seenIds).add(dismissedId)
       : seenIds
-    if (dismissedId) setSeenIds(nextSeen)
+    if (dismissedId) {
+      // Auf ein Array begrenzen (älteste zuerst verwerfen), damit der
+      // localStorage-Eintrag nicht unbegrenzt wächst.
+      const nextArray = Array.from(nextSeen).slice(-MAX_REMEMBERED_IDS)
+      setSeenIdsArray(nextArray)
+    }
 
     if (index + 1 < queue.length) {
       setIndex(index + 1)
@@ -310,29 +324,8 @@ export default function RecipeSwiper() {
   }
 
   function handleResetDismissed() {
-    setSeenIds(new Set())
+    setSeenIdsArray([])
     fetchQueue(new Set())
-  }
-
-  // Direkt aus dem Tinder-Vorschlag heraus die Zutaten (mit automatisch
-  // ermittelten Supermarkt-Preisen, siehe useShoppingList) zur Einkaufsliste
-  // hinzufügen – ohne Umweg über "Speichern" + Rezeptdetails.
-  async function handleAddToShoppingList() {
-    if (!current) return
-    setAddingToList(true)
-    try {
-      const complete = await getFullRecipeDetails(current.id, current)
-      const full = await translateRecipe(complete)
-      await shoppingList.addMany(
-        recipeToShoppingListInputs(full, BASE_SERVINGS),
-      )
-      setJustAddedId(current.id)
-      setTimeout(() => setJustAddedId(null), 2500)
-    } catch {
-      setError('Zutaten konnten nicht zur Einkaufsliste hinzugefügt werden.')
-    } finally {
-      setAddingToList(false)
-    }
   }
 
   return (
@@ -479,21 +472,6 @@ export default function RecipeSwiper() {
                   Keine Nährwertdaten für dieses Rezept verfügbar.
                 </p>
               )}
-            </div>
-
-            <div className="border-t border-stone-100 dark:border-stone-800 p-3 pb-0">
-              <Button
-                variant="outline"
-                fullWidth
-                onClick={handleAddToShoppingList}
-                disabled={addingToList}
-              >
-                {addingToList
-                  ? 'Füge hinzu …'
-                  : justAddedId === current.id
-                    ? '✓ Zur Einkaufsliste hinzugefügt'
-                    : '🛒 Zutaten zur Einkaufsliste'}
-              </Button>
             </div>
 
             {/* Runde Icon-Buttons statt rechteckiger Vollbreiten-Buttons –

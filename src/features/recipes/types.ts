@@ -20,6 +20,18 @@ export interface RecipeNutrition {
   fatG?: number
 }
 
+// Ergebnis einer "welches Rezept passt zu diesen Zutaten"-Suche –
+// geliefert sowohl von Spoonacular (findRecipesByIngredients) als auch von
+// der kostenlosen TheMealDB-Ausweichquelle (findRecipesByIngredientsFallback
+// in mealdb.ts), deshalb hier zentral statt in spoonacular.ts definiert.
+export interface IngredientMatchRecipe {
+  id: string
+  name: string
+  thumbnail: string
+  usedIngredients: string[]
+  missedIngredients: string[]
+}
+
 export interface Recipe extends RecipeSummary {
   category: string
   area: string

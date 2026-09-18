@@ -1,4 +1,5 @@
-import type { BudgetRecipeSuggestion, IngredientMatchRecipe } from './spoonacular'
+import type { BudgetRecipeSuggestion } from './spoonacular'
+import type { IngredientMatchRecipe } from './types'
 import type { Recipe } from './types'
 import { supabase } from '../../lib/supabaseClient'
 

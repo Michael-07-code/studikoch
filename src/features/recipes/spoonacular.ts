@@ -1,4 +1,9 @@
-import type { Recipe, RecipeIngredient, RecipeNutrition } from './types'
+import type {
+  IngredientMatchRecipe,
+  Recipe,
+  RecipeIngredient,
+  RecipeNutrition,
+} from './types'
 import { extractRequiredEquipment } from './equipmentMatch'
 import { EXOTIC_OR_FANCY_INGREDIENTS, isStudentFriendly } from './simpleFilter'
 import {
@@ -382,13 +387,6 @@ export async function searchBudgetRecipes(
   return results
 }
 
-export interface IngredientMatchRecipe {
-  id: string
-  name: string
-  thumbnail: string
-  usedIngredients: string[]
-  missedIngredients: string[]
-}
 
 interface SpoonacularFindByIngredientsItem {
   id: number
