@@ -1,5 +1,5 @@
 import { useUserSettings } from '../../lib/useUserSettings'
-import { DEFAULT_BUDGET_SETTINGS, type BudgetSettings } from './types'
+import { normalizeBudgetSettings, type BudgetSettings } from './types'
 
 /**
  * Budget-Einstellungen (Tages-/Wochenbudget, Aufteilung nach Mahlzeit) –
@@ -9,10 +9,9 @@ import { DEFAULT_BUDGET_SETTINGS, type BudgetSettings } from './types'
 export function useBudgetSettings() {
   const { settings, patch, loading } = useUserSettings()
 
-  const budgetSettings: BudgetSettings = {
-    ...DEFAULT_BUDGET_SETTINGS,
-    ...((settings?.budget_settings as Partial<BudgetSettings> | null) ?? {}),
-  }
+  const budgetSettings: BudgetSettings = normalizeBudgetSettings(
+    settings?.budget_settings as Partial<BudgetSettings> | null,
+  )
 
   function updateSettings(p: Partial<BudgetSettings>) {
     patch({ budget_settings: { ...budgetSettings, ...p } })

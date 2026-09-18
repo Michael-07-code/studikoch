@@ -5,8 +5,7 @@ import { EmptyState } from '../../components/ui'
 
 const MEAL_TYPE_LABELS: Record<MealType, string> = {
   fruehstueck: 'Frühstück',
-  mittagessen: 'Mittagessen',
-  abendessen: 'Abendessen',
+  hauptmahlzeit: 'Mittag-/Abendessen',
   sonstiges: 'Sonstiges',
 }
 

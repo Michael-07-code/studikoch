@@ -3,7 +3,12 @@ import { supabase } from '../../lib/supabaseClient'
 import { useAuth } from '../../lib/AuthProvider'
 import { showUndo } from '../../lib/undoToast'
 import type { Recipe } from './types'
-import type { MealType, RecipeList, SavedRecipe } from './savedTypes'
+import {
+  normalizeMealType,
+  type MealType,
+  type RecipeList,
+  type SavedRecipe,
+} from './savedTypes'
 
 // So kommt eine Zeile aus "saved_recipes" zurück (snake_case). Die
 // interne Datenbank-ID der Zeile brauchen wir nach außen nicht – überall
@@ -25,7 +30,7 @@ function toSavedRecipe(row: SavedRecipeRow): SavedRecipe {
     recipe: row.recipe,
     savedAt: row.saved_at,
     listIds: row.list_ids ?? [],
-    mealType: row.meal_type,
+    mealType: normalizeMealType(row.meal_type),
     prepTimeMinutes: row.prep_time_minutes ?? undefined,
     estimatedCostEuro: row.estimated_cost_euro ?? undefined,
   }

@@ -6,16 +6,11 @@ import { Card, EmptyState, Hint, TabBar } from '../../components/ui'
 
 type Period = 'tag' | 'woche'
 
-const MEAL_TYPES: BudgetMealType[] = [
-  'fruehstueck',
-  'mittagessen',
-  'abendessen',
-]
+const MEAL_TYPES: BudgetMealType[] = ['fruehstueck', 'hauptmahlzeit']
 
 const MEAL_TYPE_LABELS: Record<BudgetMealType, string> = {
   fruehstueck: 'Frühstück',
-  mittagessen: 'Mittagessen',
-  abendessen: 'Abendessen',
+  hauptmahlzeit: 'Mittag-/Abendessen',
 }
 
 function suggestionsFor(

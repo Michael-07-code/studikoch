@@ -230,7 +230,40 @@ const EXOTIC_INGREDIENTS = [
   'harissa',
   'quail',
   'rabbit',
+  // Meeresfrüchte: laut Nutzerwunsch explizit unerwünscht (Beispiel:
+  // Krabbensalat) – hier statt über den viel breiteren Spoonacular-
+  // "Seafood"-Intoleranzfilter, damit gewöhnlicher Fisch (Lachs, Thunfisch
+  // aus der Dose, …) weiterhin vorgeschlagen werden kann.
+  'crab',
+  'shrimp',
+  'prawn',
+  'oyster',
+  'mussel',
+  'clam',
+  'scallop',
+  'squid',
+  'octopus',
+  'anchovy',
+  'crawfish',
+  'escargot',
+  'snail',
 ]
+
+// Grobe Heuristik für "einfach umsetzbar, nichts für Gourmets": wenige
+// Zutaten und wenige Zubereitungsschritte. Kein Anspruch auf Präzision (das
+// gibt die Spoonacular-API nicht direkt her), aber deutlich besser als gar
+// kein Filter – sortiert typische Sterneküche-Rezepte mit 20 Zutaten und 15
+// Arbeitsschritten zuverlässig aus.
+const MAX_SIMPLE_INGREDIENTS = 10
+const MAX_SIMPLE_STEPS = 8
+
+function isSimpleEnough(recipe: Recipe): boolean {
+  return (
+    recipe.ingredients.length <= MAX_SIMPLE_INGREDIENTS &&
+    (recipe.instructions.length === 0 ||
+      recipe.instructions.length <= MAX_SIMPLE_STEPS)
+  )
+}
 
 // Wird geworfen, wenn Spoonacular ein aufgebrauchtes Tageskontingent meldet
 // (HTTP 402) oder eine Ratenbegrenzung greift (429) UND kein lokal
@@ -370,11 +403,22 @@ export async function searchBudgetRecipes(
   }
   const data = (await res.json()) as ComplexSearchResponse
 
-  const results = (data.results ?? []).map((raw) => ({
+  let results = (data.results ?? []).map((raw) => ({
     recipe: toRecipe(raw),
     prepTimeMinutes: raw.readyInMinutes,
     estimatedCostEuro: priceToEuroPerRecipe(raw.pricePerServing),
   }))
+
+  // Zusätzlich zum Ausschluss einzelner Zutaten (excludeIngredients oben)
+  // auch insgesamt zu aufwendige/"Gourmet"-Rezepte aussortieren – die
+  // Studenten-Zielgruppe will laut Rückmeldung wirklich nur unkomplizierte
+  // Gerichte sehen, keine Rezepte mit 20 Zutaten und Sternerestaurant-
+  // Zubereitung. Nur anwenden, wenn genug Ergebnisse übrig bleiben, damit
+  // eine ansonsten passende Suche nicht komplett leer ausgeht.
+  if (params.excludeExoticIngredients) {
+    const simplified = results.filter((r) => isSimpleEnough(r.recipe))
+    if (simplified.length > 0) results = simplified
+  }
 
   if (useQueryCache) {
     setQueryCache(params as Record<string, unknown>, results)

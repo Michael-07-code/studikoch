@@ -97,7 +97,7 @@ export default function RecipePreferencesPanel({
               ✕
             </button>
           </div>
-          <Hint>Gilt für Tinder und Budget-Suche.</Hint>
+          <Hint>Gilt für Tinder, Budget-Suche und Wochenplan.</Hint>
 
           <label className="block">
             Max. Zubereitungszeit (Min.)
@@ -126,7 +126,8 @@ export default function RecipePreferencesPanel({
               }
               className="size-4 rounded border-stone-200 dark:border-stone-700 text-emerald-600 focus:ring-emerald-500"
             />
-            Nur alltägliche Zutaten (keine Exoten)
+            Nur einfache, studententaugliche Gerichte (keine Exoten,
+            Meeresfrüchte oder aufwendige Gourmet-Rezepte)
           </label>
 
           <label className="flex items-center gap-2">

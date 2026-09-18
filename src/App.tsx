@@ -7,6 +7,7 @@ import RecipesPage from './features/recipes/RecipesPage'
 import WochenplanPage from './features/mealplan/WochenplanPage'
 import SettingsPage from './features/settings/SettingsPage'
 import { AuthProvider, useAuth } from './lib/AuthProvider'
+import { UserSettingsProvider } from './lib/useUserSettings'
 import { hasSupabaseConfig } from './lib/supabaseClient'
 import SupabaseSetupNotice from './features/auth/SupabaseSetupNotice'
 import AuthPage from './features/auth/AuthPage'
@@ -38,16 +39,18 @@ function AppRoutes() {
   }
 
   return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/utensilien" element={<InventoryPage />} />
-        <Route path="/einkaufsliste" element={<ShoppingListPage />} />
-        <Route path="/rezepte" element={<RecipesPage />} />
-        <Route path="/wochenplan" element={<WochenplanPage />} />
-        <Route path="/einstellungen" element={<SettingsPage />} />
-      </Routes>
-    </Layout>
+    <UserSettingsProvider>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/utensilien" element={<InventoryPage />} />
+          <Route path="/einkaufsliste" element={<ShoppingListPage />} />
+          <Route path="/rezepte" element={<RecipesPage />} />
+          <Route path="/wochenplan" element={<WochenplanPage />} />
+          <Route path="/einstellungen" element={<SettingsPage />} />
+        </Routes>
+      </Layout>
+    </UserSettingsProvider>
   )
 }
 

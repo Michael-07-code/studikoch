@@ -65,7 +65,7 @@ export default function SettingsPage() {
               Beim Speichern eines Rezepts nach der Mahlzeit fragen
             </span>
             <span className="block text-sm text-stone-500 dark:text-stone-400">
-              Frühstück, Mittagessen oder Abendessen direkt beim Speichern
+              Frühstück oder Mittag-/Abendessen direkt beim Speichern
               festlegen. Ausgeschaltet: Rezepte werden ohne Nachfrage als
               „Sonstiges" gespeichert, du kannst die Mahlzeit später jederzeit
               unter „Meine Rezepte" nachtragen.
@@ -73,10 +73,9 @@ export default function SettingsPage() {
           </span>
         </label>
         <Hint>
-          Persönlicher Hinweis: Mittag- und Abendessen werden in
-          Vorschlägen (z. B. im Wochenplan) ohnehin gleich behandelt – du
-          kannst also auch mittags ein als „Abendessen" gespeichertes Rezept
-          kochen und umgekehrt.
+          Mittag- und Abendessen sind nur noch eine einzige Kategorie
+          „Mittag-/Abendessen" – die App unterscheidet sie an keiner Stelle
+          mehr.
         </Hint>
       </Card>
     </div>

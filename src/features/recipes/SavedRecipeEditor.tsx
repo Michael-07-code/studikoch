@@ -4,17 +4,11 @@ import RecipeDetail from './RecipeDetail'
 import { BASE_SERVINGS } from './scaleMeasure'
 import { Card, Hint } from '../../components/ui'
 
-const MEAL_TYPES: MealType[] = [
-  'fruehstueck',
-  'mittagessen',
-  'abendessen',
-  'sonstiges',
-]
+const MEAL_TYPES: MealType[] = ['fruehstueck', 'hauptmahlzeit', 'sonstiges']
 
 const MEAL_TYPE_LABELS: Record<MealType, string> = {
   fruehstueck: 'Frühstück',
-  mittagessen: 'Mittagessen',
-  abendessen: 'Abendessen',
+  hauptmahlzeit: 'Mittag-/Abendessen',
   sonstiges: 'Sonstiges',
 }
 

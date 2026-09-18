@@ -13,8 +13,13 @@ export interface WeeklyPlanSlot {
   prepTimeMinutes?: number
 }
 
+// "skip" markiert bewusst "ich esse hier nichts" – anders als ein leerer
+// Slot (null = noch kein Vorschlag zugewiesen), damit dieser Unterschied in
+// der Kostenrechnung und der Anzeige sichtbar bleibt.
+export type WeeklyPlanSlotValue = WeeklyPlanSlot | 'skip'
+
 // Schlüssel je Slot: "<Tagindex 0-6>-<Mahlzeit>", z. B. "0-fruehstueck".
-export type WeeklyPlanSlots = Record<string, WeeklyPlanSlot | null>
+export type WeeklyPlanSlots = Record<string, WeeklyPlanSlotValue | null>
 
 export interface WeeklyPlan {
   // "Meal-Prep": dieselben 1-2 Gerichte pro Mahlzeitentyp über die Woche
@@ -30,4 +35,28 @@ export const EMPTY_WEEKLY_PLAN: WeeklyPlan = {
 
 export function slotKey(day: number, mealType: BudgetMealType): string {
   return `${day}-${mealType}`
+}
+
+export function isFilledSlot(
+  value: WeeklyPlanSlotValue | null | undefined,
+): value is WeeklyPlanSlot {
+  return !!value && value !== 'skip'
+}
+
+// Frühere Versionen kannten noch "mittagessen"/"abendessen" als eigene
+// Mahlzeiten (siehe budget/types.ts) – ein zu einer dieser beiden Kategorien
+// gehörender, bereits gespeicherter Slot passt zu keinem aktuellen
+// slotKey() mehr und würde sonst als "unsichtbarer", aber in der
+// Kostensumme weiterhin mitgezählter Karteileichen-Eintrag bestehen
+// bleiben. Beim Lesen daher auf die aktuellen Schlüssel begrenzen.
+const CURRENT_KEY_PATTERN = /-(?:fruehstueck|hauptmahlzeit)$/
+
+export function sanitizePlanSlots(slots: WeeklyPlanSlots): WeeklyPlanSlots {
+  const result: WeeklyPlanSlots = {}
+  for (const [key, value] of Object.entries(slots)) {
+    if (CURRENT_KEY_PATTERN.test(key)) {
+      result[key] = value
+    }
+  }
+  return result
 }

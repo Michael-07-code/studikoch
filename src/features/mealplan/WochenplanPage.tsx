@@ -16,9 +16,12 @@ import { translateRecipe } from '../recipes/translateRecipe'
 import { translateText } from '../../lib/translate'
 import { recipeToShoppingListInputs } from '../recipes/toShoppingListItem'
 import { useSavedRecipes } from '../recipes/useSavedRecipes'
+import { useRecipePreferences } from '../recipes/useRecipePreferences'
+import RecipePreferencesPanel from '../recipes/RecipePreferencesPanel'
 import RecipeDetail from '../recipes/RecipeDetail'
 import type { Recipe } from '../recipes/types'
 import {
+  isFilledSlot,
   PLAN_DAYS,
   slotKey,
   type BudgetMealType,
@@ -35,18 +38,16 @@ import {
 
 type Tab = 'plan' | 'budget'
 
-const MEAL_TYPES: BudgetMealType[] = ['fruehstueck', 'mittagessen', 'abendessen']
+const MEAL_TYPES: BudgetMealType[] = ['fruehstueck', 'hauptmahlzeit']
 const MEAL_TYPE_LABELS: Record<BudgetMealType, string> = {
   fruehstueck: 'Frühstück',
-  mittagessen: 'Mittagessen',
-  abendessen: 'Abendessen',
+  hauptmahlzeit: 'Mittag-/Abendessen',
 }
 // Spoonacular-Gerichtart je Mahlzeit, für passendere Vorschläge als eine
 // generische Suche (siehe dishType in spoonacular.ts).
 const DISH_TYPE_BY_MEAL: Record<BudgetMealType, string> = {
   fruehstueck: 'breakfast',
-  mittagessen: 'main course',
-  abendessen: 'main course',
+  hauptmahlzeit: 'main course',
 }
 
 // TheMealDB-Rezepte (siehe unten, Ersatzquelle bei aufgebrauchtem
@@ -80,18 +81,20 @@ function toSlot(
 // suchen). Einzelne Tage/Mahlzeiten sind über "Tauschen" austauschbar, ohne
 // den ganzen Plan neu zu erstellen.
 export default function WochenplanPage() {
-  const { plan, setSlot, setManySlots, clearPlan, updatePlan } = useWeeklyPlan()
+  const { plan, setSlot, setManySlots, toggleSkip, clearPlan, updatePlan } =
+    useWeeklyPlan()
   const { settings: budgetSettings, updateSettings: updateBudgetSettings } =
     useBudgetSettings()
   const shoppingList = useShoppingList()
   const savedRecipes = useSavedRecipes()
+  const { preferences } = useRecipePreferences()
 
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [usingFallback, setUsingFallback] = useState(false)
   const [candidatesByMeal, setCandidatesByMeal] = useState<
     Record<BudgetMealType, BudgetRecipeSuggestion[]>
-  >({ fruehstueck: [], mittagessen: [], abendessen: [] })
+  >({ fruehstueck: [], hauptmahlzeit: [] })
   const [displayNames, setDisplayNames] = useState<Record<string, string>>({})
 
   const [viewing, setViewing] = useState<Recipe | null>(null)
@@ -119,8 +122,7 @@ export default function WochenplanPage() {
     try {
       const nextCandidates: Record<BudgetMealType, BudgetRecipeSuggestion[]> = {
         fruehstueck: [],
-        mittagessen: [],
-        abendessen: [],
+        hauptmahlzeit: [],
       }
       const nextNames: Record<string, string> = {}
       const newSlots: Record<string, WeeklyPlanSlot | null> = {}
@@ -134,6 +136,15 @@ export default function WochenplanPage() {
             maxPricePerServingEuro: mealBudget > 0 ? mealBudget : undefined,
             dishType: DISH_TYPE_BY_MEAL[mealType],
             number: wanted,
+            // Dieselben "einfach/studententauglich"-Filter wie im
+            // Rezepte-Tinder und der Budget-Suche (vorher fehlten sie hier
+            // komplett). "sort: random" sorgt außerdem dafür, dass "Plan
+            // neu erstellen" tatsächlich neue statt der immer gleichen,
+            // 24h zwischengespeicherten Vorschläge liefert.
+            maxReadyTimeMinutes: preferences.maxTimeMinutes ?? undefined,
+            excludeExoticIngredients: preferences.everydayIngredientsOnly,
+            minCalories: preferences.fillingOnly ? 500 : undefined,
+            sort: 'random',
           })
           if (getLastFetchSource() === 'pool-fallback') setUsingFallback(true)
         } catch (err) {
@@ -187,7 +198,9 @@ export default function WochenplanPage() {
     const candidates = candidatesByMeal[mealType]
     if (candidates.length === 0) return
     const current = plan.slots[slotKey(day, mealType)]
-    const currentIdx = candidates.findIndex((c) => c.recipe.id === current?.recipeId)
+    const currentIdx = candidates.findIndex(
+      (c) => isFilledSlot(current) && c.recipe.id === current.recipeId,
+    )
     const next = candidates[(currentIdx + 1) % candidates.length]
     setSlot(
       slotKey(day, mealType),
@@ -216,7 +229,7 @@ export default function WochenplanPage() {
       const distinctIds = Array.from(
         new Set(
           Object.values(plan.slots)
-            .filter((s): s is WeeklyPlanSlot => !!s)
+            .filter(isFilledSlot)
             .map((s) => s.recipeId),
         ),
       )
@@ -237,9 +250,10 @@ export default function WochenplanPage() {
 
   const filledSlotCount = Object.values(plan.slots).filter(Boolean).length
   // Grobe Näherung: estimatedCostEuro gilt für 4 Portionen, ein Slot steht
-  // für eine Mahlzeit (1 Portion).
+  // für eine Mahlzeit (1 Portion). "skip"-Slots ("ich esse hier nichts")
+  // fließen bewusst nicht in die Kostensumme ein.
   const totalCost = Object.values(plan.slots).reduce(
-    (sum, s) => sum + (s?.estimatedCostEuro ?? 0) / 4,
+    (sum, s) => (isFilledSlot(s) ? sum + (s.estimatedCostEuro ?? 0) / 4 : sum),
     0,
   )
 
@@ -280,28 +294,31 @@ export default function WochenplanPage() {
 
       {tab === 'plan' && hasSpoonacularKey() && (
         <>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button onClick={handleGenerate} disabled={generating}>
-              {generating
-                ? 'Erstelle Plan …'
-                : filledSlotCount > 0
-                  ? 'Plan neu erstellen'
-                  : 'Plan erstellen'}
-            </Button>
-            <label className="flex items-center gap-2 text-sm text-stone-700 dark:text-stone-300">
-              <input
-                type="checkbox"
-                checked={plan.mealPrepMode}
-                onChange={(e) => updatePlan({ mealPrepMode: e.target.checked })}
-                className="size-4 rounded border-stone-200 dark:border-stone-700 text-emerald-600 focus:ring-emerald-500"
-              />
-              Meal-Prep (wenige Gerichte wiederholen)
-            </label>
-            {filledSlotCount > 0 && (
-              <Button variant="ghost" size="sm" onClick={clearPlan}>
-                Plan leeren
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <Button onClick={handleGenerate} disabled={generating}>
+                {generating
+                  ? 'Erstelle Plan …'
+                  : filledSlotCount > 0
+                    ? 'Plan neu erstellen'
+                    : 'Plan erstellen'}
               </Button>
-            )}
+              <label className="flex items-center gap-2 text-sm text-stone-700 dark:text-stone-300">
+                <input
+                  type="checkbox"
+                  checked={plan.mealPrepMode}
+                  onChange={(e) => updatePlan({ mealPrepMode: e.target.checked })}
+                  className="size-4 rounded border-stone-200 dark:border-stone-700 text-emerald-600 focus:ring-emerald-500"
+                />
+                Meal-Prep (wenige Gerichte wiederholen)
+              </label>
+              {filledSlotCount > 0 && (
+                <Button variant="ghost" size="sm" onClick={clearPlan}>
+                  Plan leeren
+                </Button>
+              )}
+            </div>
+            <RecipePreferencesPanel />
           </div>
 
           {dailyBase === undefined && (
@@ -359,15 +376,17 @@ export default function WochenplanPage() {
               {PLAN_DAYS.map((dayLabel, day) => (
                 <Card key={dayLabel} className="space-y-2">
                   <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100">{dayLabel}</h3>
-                  <div className="grid gap-2 sm:grid-cols-3">
+                  <div className="grid gap-2 sm:grid-cols-2">
                     {MEAL_TYPES.map((mealType) => {
-                      const slot = plan.slots[slotKey(day, mealType)]
+                      const key = slotKey(day, mealType)
+                      const slot = plan.slots[key]
+                      const skipped = slot === 'skip'
                       return (
                         <div key={mealType} className="rounded-xl bg-stone-100 dark:bg-stone-800 p-2 text-xs">
                           <p className="mb-1 font-medium text-stone-500 dark:text-stone-400">
                             {MEAL_TYPE_LABELS[mealType]}
                           </p>
-                          {slot ? (
+                          {isFilledSlot(slot) ? (
                             <div className="space-y-1">
                               <p className="text-sm text-stone-900 dark:text-stone-100">{slot.recipeName}</p>
                               <p className="text-stone-500 dark:text-stone-400">
@@ -380,7 +399,7 @@ export default function WochenplanPage() {
                                   .filter(Boolean)
                                   .join(' · ')}
                               </p>
-                              <div className="flex gap-2 pt-1">
+                              <div className="flex flex-wrap gap-2 pt-1">
                                 <button
                                   onClick={() => handleView(slot)}
                                   className="text-emerald-700 dark:text-emerald-400 underline"
@@ -393,10 +412,36 @@ export default function WochenplanPage() {
                                 >
                                   Tauschen
                                 </button>
+                                <button
+                                  onClick={() => toggleSkip(key)}
+                                  className="text-stone-500 dark:text-stone-400 underline"
+                                >
+                                  Nichts essen
+                                </button>
                               </div>
                             </div>
+                          ) : skipped ? (
+                            <div className="space-y-1">
+                              <p className="italic text-stone-400 dark:text-stone-500">
+                                Nichts geplant
+                              </p>
+                              <button
+                                onClick={() => toggleSkip(key)}
+                                className="text-emerald-700 dark:text-emerald-400 underline"
+                              >
+                                Doch etwas essen
+                              </button>
+                            </div>
                           ) : (
-                            <p className="text-stone-400 dark:text-stone-500">–</p>
+                            <div className="space-y-1">
+                              <p className="text-stone-400 dark:text-stone-500">–</p>
+                              <button
+                                onClick={() => toggleSkip(key)}
+                                className="text-stone-500 dark:text-stone-400 underline"
+                              >
+                                Nichts essen
+                              </button>
+                            </div>
                           )}
                         </div>
                       )

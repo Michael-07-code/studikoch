@@ -136,7 +136,7 @@ function shuffle<T>(arr: T[]): T[] {
 // für Mittag-/Abendessen wird aus den übrigen Hauptgerichte-Kategorien
 // gewählt.
 export async function getRandomRecipesForMeal(
-  mealType: 'fruehstueck' | 'mittagessen' | 'abendessen' | null,
+  mealType: 'fruehstueck' | 'hauptmahlzeit' | null,
   count: number,
   excludeIds: Set<string> = new Set(),
 ): Promise<Recipe[]> {

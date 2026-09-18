@@ -18,6 +18,7 @@ import { useAppSettings } from '../../lib/useAppSettings'
 import type { Recipe } from '../recipes/types'
 import type { MealType } from '../recipes/savedTypes'
 import MealTypeChooser from '../recipes/MealTypeChooser'
+import NutritionTable from '../recipes/NutritionTable'
 import { useSavedRecipes } from '../recipes/useSavedRecipes'
 import { useShoppingList } from '../shopping-list/useShoppingList'
 import { recipeToShoppingListInputs } from '../recipes/toShoppingListItem'
@@ -69,14 +70,13 @@ export default function RecipeSwiper() {
 
   const usingSpoonacular = hasSpoonacularKey()
 
-  // Holt Vorschläge bevorzugt von Spoonacular (Zeit/Kosten/Geräte-Angaben)
-  // und mischt bewusst immer ein paar Rezepte von TheMealDB dazu – mehr
-  // Abwechslung, und bei aufgebrauchtem Spoonacular-Kontingent (inkl. schon
-  // leerem Zwischenspeicher, siehe searchBudgetRecipes) füllt diese zweite,
-  // kostenlose Quelle komplett auf, statt dass der Vorschlag ganz ausbleibt.
-  // Absichtlich ohne Hinweis in der UI: Karten aus beiden Quellen sehen
-  // gleich aus (einheitliches Recipe-Format), fehlende Zeit-/Kostenangaben
-  // blendet die Karte ohnehin nur aus statt eine Lücke zu zeigen.
+  // Holt Vorschläge bevorzugt von Spoonacular (Zeit/Kosten/Geräte-/
+  // Nährwert-Angaben). TheMealDB dient nur noch als echte Ausweich-Quelle,
+  // wenn Spoonacular gar nichts liefert (Kontingent aufgebraucht) – vorher
+  // wurden bewusst immer ein paar TheMealDB-Rezepte zur Abwechslung
+  // dazugemischt, aber TheMealDB liefert grundsätzlich keine Nährwertdaten.
+  // Nutzerwunsch: eine Nährwerttabelle bei jedem Gericht – das ist mit
+  // durchgehend gemischten Karten ohne Nährwerte nicht zu erfüllen.
   async function fetchQueue(excludeIds: Set<string>) {
     setLoading(true)
     setError(null)
@@ -101,16 +101,14 @@ export default function RecipeSwiper() {
           // wird stattdessen vollständig über TheMealDB aufgefüllt.
         }
 
-        try {
-          const extra = await getRandomRecipesForMeal(
-            null,
-            recipes.length === 0 ? 8 : 3,
-            excludeIds,
-          )
-          recipes = [...recipes, ...extra]
-        } catch {
-          // Zweite Quelle ist nur eine Ergänzung – bei Fehler einfach mit
-          // dem weitermachen, was schon da ist.
+        if (recipes.length === 0) {
+          try {
+            const extra = await getRandomRecipesForMeal(null, 8, excludeIds)
+            recipes = [...recipes, ...extra]
+          } catch {
+            // Zweite Quelle ist nur eine Ausweichmöglichkeit – bei Fehler
+            // einfach mit dem weitermachen, was schon da ist.
+          }
         }
 
         if (preferences.respectInventory) {
@@ -452,6 +450,17 @@ export default function RecipeSwiper() {
                 <p className="text-xs text-stone-700 dark:text-stone-300">
                   <span className="font-medium">Zutaten: </span>
                   {cardDisplay.ingredientNames.join(', ')}
+                </p>
+              )}
+
+              {current.nutrition ? (
+                <NutritionTable
+                  nutrition={current.nutrition}
+                  servings={BASE_SERVINGS}
+                />
+              ) : (
+                <p className="text-xs text-stone-400 dark:text-stone-500">
+                  Keine Nährwertdaten für dieses Rezept verfügbar.
                 </p>
               )}
             </div>
