@@ -19,13 +19,21 @@ import SavedRecipeEditor from './SavedRecipeEditor'
 import BudgetSearch from './BudgetSearch'
 import CookFromInventory from './CookFromInventory'
 import UseItUpFinder from './UseItUpFinder'
+import CustomRecipeForm from './CustomRecipeForm'
 import { BASE_SERVINGS } from './scaleMeasure'
 import { Button, Hint, PageHeader, TabBar } from '../../components/ui'
 
-type Mode = 'suche' | 'inventory' | 'useitup' | 'budget' | 'saved'
+type Mode = 'suche' | 'inventory' | 'useitup' | 'budget' | 'saved' | 'own'
 type SearchBy = 'name' | 'ingredient'
 
-const VALID_MODES: Mode[] = ['suche', 'inventory', 'useitup', 'budget', 'saved']
+const VALID_MODES: Mode[] = [
+  'suche',
+  'inventory',
+  'useitup',
+  'budget',
+  'saved',
+  'own',
+]
 
 export default function RecipesPage() {
   // Erlaubt Sprünge von anderen Seiten aus direkt in einen bestimmten Reiter
@@ -154,6 +162,7 @@ export default function RecipesPage() {
     { id: 'inventory', label: 'Was kann ich kochen?' },
     { id: 'useitup', label: 'Was muss weg?' },
     { id: 'budget', label: 'Budget-Suche' },
+    { id: 'own', label: 'Eigenes Rezept' },
     { id: 'saved', label: `Meine Rezepte (${savedRecipes.saved.length})` },
   ]
 
@@ -274,6 +283,8 @@ export default function RecipesPage() {
       {mode === 'useitup' && <UseItUpFinder />}
 
       {mode === 'budget' && <BudgetSearch />}
+
+      {mode === 'own' && <CustomRecipeForm />}
 
       {mode === 'saved' && !selectedSaved && (
         <SavedRecipesBrowser

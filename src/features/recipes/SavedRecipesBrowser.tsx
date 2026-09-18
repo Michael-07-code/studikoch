@@ -98,7 +98,16 @@ export default function SavedRecipesBrowser({
             >
               {s.recipe.thumbnail && (
                 <img
-                  src={`${s.recipe.thumbnail}/medium`}
+                  src={
+                    // TheMealDB unterstützt einen "/medium"-Bildgrößen-
+                    // Suffix, Spoonacular- und eigene (Supabase-Storage-)
+                    // Bild-URLs dagegen nicht – vorher wurde das immer
+                    // angehängt, wodurch z. B. Spoonacular-Vorschaubilder
+                    // hier kaputt waren (404).
+                    s.recipe.thumbnail.includes('themealdb.com')
+                      ? `${s.recipe.thumbnail}/medium`
+                      : s.recipe.thumbnail
+                  }
                   alt={s.recipe.name}
                   className="h-32 w-full object-cover"
                   loading="lazy"

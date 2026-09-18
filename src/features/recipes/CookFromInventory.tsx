@@ -9,7 +9,11 @@ import {
 import { findRecipesByIngredientsFallback, getRecipeById } from './mealdb'
 import { isSpoonacularId } from './recipeSource'
 import { translateRecipe } from './translateRecipe'
-import { translateMany, translateText } from '../../lib/translate'
+import {
+  translateMany,
+  translateText,
+  translateManyToEnglish,
+} from '../../lib/translate'
 import { recipeToShoppingListInputs } from './toShoppingListItem'
 import { useSavedRecipes } from './useSavedRecipes'
 import { useShoppingList } from '../shopping-list/useShoppingList'
@@ -78,9 +82,14 @@ export default function CookFromInventory() {
     setHasSearched(true)
     setUsingFallback(false)
     try {
+      // Zutaten aus dem Inventar sind auf Deutsch (der Nutzer trägt sie
+      // selbst so ein). Spoonacular und TheMealDB kennen aber nur englische
+      // Zutatenbezeichnungen – ohne diese Übersetzung fanden beide Quellen
+      // (v. a. die strengere TheMealDB-Ausweichsuche) so gut wie nie etwas.
+      const englishNames = await translateManyToEnglish(ingredientNames)
       let results: IngredientMatchRecipe[]
       try {
-        results = await findRecipesByIngredients(ingredientNames, RESULT_COUNT)
+        results = await findRecipesByIngredients(englishNames, RESULT_COUNT)
         setFromCache(getLastFetchSource() === 'query-cache')
       } catch (err) {
         if (!(err instanceof SpoonacularQuotaError)) throw err
@@ -90,7 +99,7 @@ export default function CookFromInventory() {
         setUsingFallback(true)
         setFromCache(false)
         results = await findRecipesByIngredientsFallback(
-          ingredientNames,
+          englishNames,
           RESULT_COUNT,
         )
       }
