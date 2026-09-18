@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react'
-import { getRandomRecipe } from '../recipes/mealdb'
+import { getRandomRecipesForMeal } from '../recipes/mealdb'
 import {
-  getLastFetchSource,
-  getRecipeInformation,
   hasSpoonacularKey,
   searchBudgetRecipes,
   SpoonacularQuotaError,
 } from '../recipes/spoonacular'
+import { getFullRecipeDetails, isSpoonacularId } from '../recipes/recipeSource'
 import { translateRecipe } from '../recipes/translateRecipe'
 import { translateText, translateMany } from '../../lib/translate'
 import { translateCategory } from '../recipes/i18n/categories'
@@ -58,7 +57,6 @@ export default function RecipeSwiper() {
   const [addingToList, setAddingToList] = useState(false)
   const [justAddedId, setJustAddedId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [usingFallback, setUsingFallback] = useState(false)
 
   // Swipe-Geste: "dragX" folgt live dem Finger/der Maus, "exiting" spielt
   // die Ausflug-Animation ab, bevor tatsächlich verworfen/gespeichert wird
@@ -71,23 +69,50 @@ export default function RecipeSwiper() {
 
   const usingSpoonacular = hasSpoonacularKey()
 
+  // Holt Vorschläge bevorzugt von Spoonacular (Zeit/Kosten/Geräte-Angaben)
+  // und mischt bewusst immer ein paar Rezepte von TheMealDB dazu – mehr
+  // Abwechslung, und bei aufgebrauchtem Spoonacular-Kontingent (inkl. schon
+  // leerem Zwischenspeicher, siehe searchBudgetRecipes) füllt diese zweite,
+  // kostenlose Quelle komplett auf, statt dass der Vorschlag ganz ausbleibt.
+  // Absichtlich ohne Hinweis in der UI: Karten aus beiden Quellen sehen
+  // gleich aus (einheitliches Recipe-Format), fehlende Zeit-/Kostenangaben
+  // blendet die Karte ohnehin nur aus statt eine Lücke zu zeigen.
   async function fetchQueue(excludeIds: Set<string>) {
     setLoading(true)
     setError(null)
     setCardDisplay(null)
-    setUsingFallback(false)
     try {
+      let recipes: Recipe[] = []
+
       if (usingSpoonacular) {
-        const results = await searchBudgetRecipes({
-          maxReadyTimeMinutes: preferences.maxTimeMinutes ?? undefined,
-          maxPricePerServingEuro: preferences.maxPriceEuro ?? undefined,
-          excludeExoticIngredients: preferences.everydayIngredientsOnly,
-          minCalories: preferences.fillingOnly ? 500 : undefined,
-          number: 10,
-          sort: 'random',
-        })
-        if (getLastFetchSource() === 'pool-fallback') setUsingFallback(true)
-        let recipes = results.map((r) => r.recipe)
+        try {
+          const results = await searchBudgetRecipes({
+            maxReadyTimeMinutes: preferences.maxTimeMinutes ?? undefined,
+            maxPricePerServingEuro: preferences.maxPriceEuro ?? undefined,
+            excludeExoticIngredients: preferences.everydayIngredientsOnly,
+            minCalories: preferences.fillingOnly ? 500 : undefined,
+            number: 8,
+            sort: 'random',
+          })
+          recipes = results.map((r) => r.recipe)
+        } catch (err) {
+          if (!(err instanceof SpoonacularQuotaError)) throw err
+          // Kontingent (und Zwischenspeicher) komplett aufgebraucht – unten
+          // wird stattdessen vollständig über TheMealDB aufgefüllt.
+        }
+
+        try {
+          const extra = await getRandomRecipesForMeal(
+            null,
+            recipes.length === 0 ? 8 : 3,
+            excludeIds,
+          )
+          recipes = [...recipes, ...extra]
+        } catch {
+          // Zweite Quelle ist nur eine Ergänzung – bei Fehler einfach mit
+          // dem weitermachen, was schon da ist.
+        }
+
         if (preferences.respectInventory) {
           recipes = recipes.filter((r) =>
             canCookWithInventory(
@@ -97,33 +122,21 @@ export default function RecipeSwiper() {
           )
         }
         recipes = recipes.filter((r) => !excludeIds.has(r.id))
-        if (recipes.length === 0) {
-          setQueue([])
-          setError(
-            'Keine passenden Rezepte gefunden. Versuche es mit weniger strengen Einstellungen oder deaktiviere den Utensilien-Filter.',
-          )
-          return
-        }
-        setQueue(recipes)
-        setIndex(0)
       } else {
-        const raw = await getRandomRecipe()
-        if (!raw) {
-          setQueue([])
-          setError('Kein Vorschlag gefunden.')
-          return
-        }
-        setQueue([raw])
-        setIndex(0)
+        recipes = await getRandomRecipesForMeal(null, 8, excludeIds)
       }
-    } catch (err) {
-      if (err instanceof SpoonacularQuotaError) {
+
+      if (recipes.length === 0) {
+        setQueue([])
         setError(
-          'Spoonacular-Kontingent für heute aufgebraucht, und keine zwischengespeicherten Rezepte übrig. Versuche es morgen wieder.',
+          'Keine passenden Rezepte gefunden. Versuche es mit weniger strengen Einstellungen oder deaktiviere den Utensilien-Filter.',
         )
-      } else {
-        setError('Vorschlag konnte nicht geladen werden.')
+        return
       }
+      setQueue(recipes)
+      setIndex(0)
+    } catch {
+      setError('Vorschlag konnte nicht geladen werden.')
     } finally {
       setLoading(false)
     }
@@ -204,10 +217,9 @@ export default function RecipeSwiper() {
       // kommt von searchBudgetRecipes) haben nicht immer vollständige
       // Zutatenlisten – vor dem Speichern die vollständigen Details holen
       // (und dauerhaft cachen), damit gespeicherte Rezepte nie mit leerer
-      // Zutatenliste landen.
-      const complete = usingSpoonacular
-        ? await getRecipeInformation(current.id)
-        : current
+      // Zutatenliste landen. Bei TheMealDB-Rezepten (id ohne "sp-"-Präfix)
+      // ist "current" bereits vollständig, siehe getFullRecipeDetails.
+      const complete = await getFullRecipeDetails(current.id, current)
       const full = await translateRecipe(complete)
       saveRecipe(full, {
         prepTimeMinutes: complete.prepTimeMinutes ?? current.prepTimeMinutes,
@@ -295,9 +307,7 @@ export default function RecipeSwiper() {
     if (!current) return
     setAddingToList(true)
     try {
-      const complete = usingSpoonacular
-        ? await getRecipeInformation(current.id)
-        : current
+      const complete = await getFullRecipeDetails(current.id, current)
       const full = await translateRecipe(complete)
       await shoppingList.addMany(
         recipeToShoppingListInputs(full, BASE_SERVINGS),
@@ -314,7 +324,7 @@ export default function RecipeSwiper() {
   return (
     <div className="mx-auto max-w-sm space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold text-stone-100">
+        <h2 className="text-lg font-semibold text-stone-900 dark:text-stone-100">
           Rezepte entdecken
         </h2>
         <RecipePreferencesPanel showInventoryToggleInline />
@@ -325,12 +335,8 @@ export default function RecipeSwiper() {
           <code>.env.local</code>.
         </Hint>
       )}
-      {usingFallback && (
-        <Hint>📦 Kontingent aufgebraucht – zeige zwischengespeicherte Rezepte.</Hint>
-      )}
-
-      {loading && <p className="text-sm text-stone-400">Lade Vorschlag …</p>}
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {loading && <p className="text-sm text-stone-500 dark:text-stone-400">Lade Vorschlag …</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
       {!loading && current && (
         <div
@@ -361,7 +367,7 @@ export default function RecipeSwiper() {
               {current.thumbnail && (
                 <img
                   src={
-                    usingSpoonacular
+                    isSpoonacularId(current.id)
                       ? current.thumbnail
                       : `${current.thumbnail}/medium`
                   }
@@ -406,10 +412,10 @@ export default function RecipeSwiper() {
             </div>
 
             <div className="space-y-2 p-4">
-              <p className="font-medium text-stone-100">
+              <p className="font-medium text-stone-900 dark:text-stone-100">
                 {cardDisplay?.displayName ?? current.name}
               </p>
-              <p className="text-xs text-stone-400">
+              <p className="text-xs text-stone-500 dark:text-stone-400">
                 {[cardDisplay?.displayCategory, cardDisplay?.displayArea]
                   .filter(Boolean)
                   .join(' · ')}
@@ -417,7 +423,7 @@ export default function RecipeSwiper() {
 
               {current.requiredEquipment &&
                 current.requiredEquipment.length > 0 && (
-                  <p className="text-xs text-stone-300">
+                  <p className="text-xs text-stone-700 dark:text-stone-300">
                     <span className="font-medium">Utensilien/Geräte: </span>
                     {current.requiredEquipment.map((eq, i) => {
                       const isMissing = missing.some(
@@ -426,7 +432,7 @@ export default function RecipeSwiper() {
                       return (
                         <span
                           key={eq.label}
-                          className={isMissing ? 'font-medium text-red-400' : ''}
+                          className={isMissing ? 'font-medium text-red-600 dark:text-red-400' : ''}
                         >
                           {eq.label}
                           {i < current.requiredEquipment!.length - 1 ? ', ' : ''}
@@ -434,7 +440,7 @@ export default function RecipeSwiper() {
                       )
                     })}
                     {missing.length > 0 && (
-                      <span className="block text-red-400">
+                      <span className="block text-red-600 dark:text-red-400">
                         Fehlt laut deinem Inventar – trag es unter
                         „Utensilien &amp; Zutaten" ein, falls vorhanden.
                       </span>
@@ -443,14 +449,14 @@ export default function RecipeSwiper() {
                 )}
 
               {cardDisplay && cardDisplay.ingredientNames.length > 0 && (
-                <p className="text-xs text-stone-300">
+                <p className="text-xs text-stone-700 dark:text-stone-300">
                   <span className="font-medium">Zutaten: </span>
                   {cardDisplay.ingredientNames.join(', ')}
                 </p>
               )}
             </div>
 
-            <div className="border-t border-stone-800 p-3 pb-0">
+            <div className="border-t border-stone-100 dark:border-stone-800 p-3 pb-0">
               <Button
                 variant="outline"
                 fullWidth
@@ -474,7 +480,7 @@ export default function RecipeSwiper() {
                 onClick={() => commitSwipe('left')}
                 disabled={saving}
                 aria-label="Verwerfen"
-                className="flex size-14 items-center justify-center rounded-full border-2 border-stone-700 bg-stone-900 text-2xl text-red-500 shadow-sm transition-all duration-150 hover:border-red-800 hover:bg-red-950/40 active:scale-90 disabled:opacity-50"
+                className="flex size-14 items-center justify-center rounded-full border-2 border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 text-2xl text-red-500 shadow-sm transition-all duration-150 hover:border-red-300 dark:hover:border-red-800 hover:bg-red-50 dark:hover:bg-red-950/40 active:scale-90 disabled:opacity-50"
               >
                 ✕
               </button>
@@ -503,7 +509,7 @@ export default function RecipeSwiper() {
         Verworfen ist nicht endgültig.{' '}
         <button
           onClick={handleResetDismissed}
-          className="text-emerald-400 underline"
+          className="text-emerald-700 dark:text-emerald-400 underline"
         >
           Jetzt zurücksetzen
         </button>

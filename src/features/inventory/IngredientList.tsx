@@ -72,7 +72,7 @@ export default function IngredientList({
 
   return (
     <div className="space-y-3">
-      <h2 className="text-lg font-semibold text-stone-100">Zutaten</h2>
+      <h2 className="text-lg font-semibold text-stone-900 dark:text-stone-100">Zutaten</h2>
 
       {/* Barcode-Scan ist die schnellste Art, eine Zutat zu erfassen – daher
           als große, eigenständige Kachel ganz oben statt als kleiner Button
@@ -83,16 +83,16 @@ export default function IngredientList({
           setScanStatus(null)
           setScanning(true)
         }}
-        className="flex w-full items-center gap-3 rounded-2xl border-2 border-dashed border-emerald-700 bg-emerald-950/40 px-4 py-3.5 text-left shadow-sm transition-all duration-150 hover:border-emerald-400 hover:bg-emerald-900/40 hover:shadow-md active:scale-[0.99]"
+        className="flex w-full items-center gap-3 rounded-2xl border-2 border-dashed border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 px-4 py-3.5 text-left shadow-sm transition-all duration-150 hover:border-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 hover:shadow-md active:scale-[0.99]"
       >
         <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-xl text-white shadow-md shadow-emerald-950/15">
           📷
         </span>
         <span className="min-w-0">
-          <span className="block text-sm font-semibold text-emerald-300">
+          <span className="block text-sm font-semibold text-emerald-800 dark:text-emerald-300">
             Produkt per Barcode scannen
           </span>
-          <span className="block text-xs text-emerald-400">
+          <span className="block text-xs text-emerald-700 dark:text-emerald-400">
             Schneller als Tippen – Kamera öffnet sich sofort
           </span>
         </span>
@@ -106,10 +106,10 @@ export default function IngredientList({
       )}
       {scanStatus && <Hint>{scanStatus}</Hint>}
 
-      <div className="flex items-center gap-3 pt-1 text-xs font-medium text-stone-500">
-        <span className="h-px flex-1 bg-stone-700" />
+      <div className="flex items-center gap-3 pt-1 text-xs font-medium text-stone-400 dark:text-stone-500">
+        <span className="h-px flex-1 bg-stone-200 dark:bg-stone-700" />
         oder manuell eintragen
-        <span className="h-px flex-1 bg-stone-700" />
+        <span className="h-px flex-1 bg-stone-200 dark:bg-stone-700" />
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
@@ -118,7 +118,7 @@ export default function IngredientList({
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Zutat, z. B. Reis"
-          className="w-full min-w-0 flex-1 rounded-xl border border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:min-w-[10rem]"
+          className="w-full min-w-0 flex-1 rounded-xl border border-stone-200 dark:border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:min-w-[10rem]"
         />
         <div className="grid grid-cols-2 gap-2 sm:contents">
           <input
@@ -127,12 +127,12 @@ export default function IngredientList({
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="Menge"
-            className="w-full rounded-xl border border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:w-24"
+            className="w-full rounded-xl border border-stone-200 dark:border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:w-24"
           />
           <select
             value={unit}
             onChange={(e) => setUnit(e.target.value)}
-            className="w-full rounded-xl border border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:w-auto"
+            className="w-full rounded-xl border border-stone-200 dark:border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:w-auto"
           >
             {UNIT_SUGGESTIONS.map((u) => (
               <option key={u} value={u}>
@@ -149,7 +149,7 @@ export default function IngredientList({
       {items.length === 0 ? (
         <EmptyState>Noch keine Zutaten eingetragen.</EmptyState>
       ) : (
-        <ul className="divide-y divide-stone-700 rounded-xl border border-stone-700 bg-stone-900 shadow-card">
+        <ul className="divide-y divide-stone-200 dark:divide-stone-700 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 shadow-card">
           {items.map((item) => (
             <li
               key={item.id}
@@ -160,7 +160,7 @@ export default function IngredientList({
               </span>
               <button
                 onClick={() => onRemove(item.id)}
-                className="text-stone-500 transition-colors hover:text-red-400"
+                className="text-stone-400 dark:text-stone-500 transition-colors hover:text-red-600 dark:hover:text-red-400"
                 aria-label={`${item.name} entfernen`}
               >
                 Entfernen

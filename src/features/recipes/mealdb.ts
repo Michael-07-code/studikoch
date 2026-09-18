@@ -97,6 +97,77 @@ export async function filterRecipesByIngredient(
   return (data.meals ?? []).map(toSummary)
 }
 
+export async function filterRecipesByCategory(
+  category: string,
+): Promise<RecipeSummary[]> {
+  const data = await fetchJson<MealListResponse<RawMealSummary>>(
+    `${BASE_URL}/filter.php?c=${encodeURIComponent(category)}`,
+  )
+  return (data.meals ?? []).map(toSummary)
+}
+
+// TheMealDB-Kategorien, die sich als Mittag-/Abendessen eignen (laut
+// Nutzereinstellung ohnehin gleichwertig, siehe useAppSettings). "Dessert"
+// bewusst ausgeschlossen, damit nicht plötzlich ein Kuchen als Hauptgericht
+// vorgeschlagen wird.
+const MAIN_COURSE_CATEGORIES = [
+  'Chicken',
+  'Beef',
+  'Pasta',
+  'Vegetarian',
+  'Seafood',
+  'Pork',
+  'Vegan',
+  'Miscellaneous',
+  'Side',
+  'Lamb',
+]
+
+function shuffle<T>(arr: T[]): T[] {
+  return [...arr].sort(() => Math.random() - 0.5)
+}
+
+// Liefert bis zu "count" zufällige, vollständige Rezepte (inkl. Zutaten und
+// Zubereitung, in einem Aufruf pro Rezept) von TheMealDB – als kostenlose
+// zweite Quelle neben Spoonacular (siehe recipeSource.ts): entweder als
+// Ersatz, wenn dessen Tageskontingent aufgebraucht ist, oder um dem
+// Rezepte-Tinder mehr Abwechslung zu geben. TheMealDB kennt keine
+// Frühstück/Mittag/Abend-Unterscheidung außer der Kategorie "Breakfast" –
+// für Mittag-/Abendessen wird aus den übrigen Hauptgerichte-Kategorien
+// gewählt.
+export async function getRandomRecipesForMeal(
+  mealType: 'fruehstueck' | 'mittagessen' | 'abendessen' | null,
+  count: number,
+  excludeIds: Set<string> = new Set(),
+): Promise<Recipe[]> {
+  const categories = shuffle(
+    mealType === 'fruehstueck' ? ['Breakfast'] : MAIN_COURSE_CATEGORIES,
+  )
+
+  const candidateIds: string[] = []
+  for (const category of categories) {
+    if (candidateIds.length >= count * 3) break
+    try {
+      const summaries = await filterRecipesByCategory(category)
+      for (const s of shuffle(summaries)) {
+        if (!excludeIds.has(s.id) && !candidateIds.includes(s.id)) {
+          candidateIds.push(s.id)
+        }
+      }
+    } catch {
+      // Diese Kategorie überspringen, mit den übrigen weitermachen –
+      // einzelne fehlgeschlagene Anfragen sollen die ganze Ergänzung nicht
+      // scheitern lassen.
+    }
+  }
+
+  const chosen = shuffle(candidateIds).slice(0, count)
+  const recipes = await Promise.all(
+    chosen.map((id) => getRecipeById(id).catch(() => null)),
+  )
+  return recipes.filter((r): r is Recipe => r !== null)
+}
+
 export async function getRecipeById(id: string): Promise<Recipe | null> {
   const data = await fetchJson<MealListResponse<RawMeal>>(
     `${BASE_URL}/lookup.php?i=${encodeURIComponent(id)}`,

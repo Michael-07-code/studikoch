@@ -67,8 +67,8 @@ export default function ShoppingListPage() {
       {tab === 'supermaerkte' && (
         <div className="space-y-4">
           {supermarkets.length > 0 && (
-            <div className="rounded-xl border border-stone-700 bg-stone-900 p-3 shadow-card">
-              <label className="flex flex-col gap-1 text-sm text-stone-300">
+            <div className="rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 p-3 shadow-card">
+              <label className="flex flex-col gap-1 text-sm text-stone-700 dark:text-stone-300">
                 <span className="font-medium">
                   Bevorzugter Supermarkt für die Einkaufsliste
                 </span>
@@ -79,7 +79,7 @@ export default function ShoppingListPage() {
                       preferredSupermarketId: e.target.value || null,
                     })
                   }
-                  className="rounded-xl border border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  className="rounded-xl border border-stone-200 dark:border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 >
                   <option value="">
                     Kein bevorzugter Markt (günstigster pro Artikel)

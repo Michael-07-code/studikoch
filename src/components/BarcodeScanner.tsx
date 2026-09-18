@@ -89,7 +89,7 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
   }
 
   return (
-    <div className="space-y-3 rounded-2xl border border-stone-700/70 bg-stone-900 p-4 shadow-card">
+    <div className="space-y-3 rounded-2xl border border-stone-200/70 dark:border-stone-700/70 bg-white dark:bg-stone-900 p-4 shadow-card">
       {supported ? (
         <div className="overflow-hidden rounded-xl bg-black">
           <video ref={videoRef} className="w-full" muted playsInline />
@@ -100,7 +100,7 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
           Barcode unten manuell eingeben.
         </Hint>
       )}
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
       <form onSubmit={handleManualSubmit} className="flex gap-2">
         <input
           type="text"
@@ -108,7 +108,7 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
           value={manualCode}
           onChange={(e) => setManualCode(e.target.value)}
           placeholder="Barcode manuell eingeben"
-          className="flex-1 rounded-xl border border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+          className="flex-1 rounded-xl border border-stone-200 dark:border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
         />
         <Button type="submit" size="sm">
           Suchen

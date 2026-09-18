@@ -49,13 +49,13 @@ export default function CookFromInventory() {
 
   if (!hasSpoonacularKey()) {
     return (
-      <Card className="text-sm text-stone-300">
+      <Card className="text-sm text-stone-700 dark:text-stone-300">
         Kein Spoonacular-API-Key gefunden. Kostenlos erstellen auf{' '}
         <a
           href="https://spoonacular.com/food-api"
           target="_blank"
           rel="noreferrer"
-          className="text-emerald-400 underline"
+          className="text-emerald-700 dark:text-emerald-400 underline"
         >
           spoonacular.com/food-api
         </a>
@@ -139,11 +139,11 @@ export default function CookFromInventory() {
         </EmptyState>
       )}
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
       {fromCache && !error && (
         <Hint>📦 Zwischengespeichertes Ergebnis (spart Tageskontingent).</Hint>
       )}
-      {detailLoading && <p className="text-sm text-stone-400">Lade Rezeptdetails …</p>}
+      {detailLoading && <p className="text-sm text-stone-500 dark:text-stone-400">Lade Rezeptdetails …</p>}
 
       {selected && !detailLoading && (
         <RecipeDetail
@@ -169,7 +169,7 @@ export default function CookFromInventory() {
               <button
                 key={m.id}
                 onClick={() => handleSelect(m)}
-                className="flex gap-3 overflow-hidden rounded-2xl border border-stone-700/70 bg-stone-900 p-3 text-left shadow-card transition-shadow hover:shadow-card-hover"
+                className="flex gap-3 overflow-hidden rounded-2xl border border-stone-200/70 dark:border-stone-700/70 bg-white dark:bg-stone-900 p-3 text-left shadow-card transition-shadow hover:shadow-card-hover"
               >
                 {m.thumbnail && (
                   <img
@@ -180,7 +180,7 @@ export default function CookFromInventory() {
                   />
                 )}
                 <div className="min-w-0 space-y-1">
-                  <p className="truncate text-sm font-medium text-stone-100">
+                  <p className="truncate text-sm font-medium text-stone-900 dark:text-stone-100">
                     {info?.name ?? m.name}
                   </p>
                   {info && info.usedTranslated.length > 0 && (
@@ -193,7 +193,7 @@ export default function CookFromInventory() {
                     </div>
                   )}
                   {info && info.missedTranslated.length > 0 && (
-                    <p className="text-xs text-amber-400">
+                    <p className="text-xs text-amber-700 dark:text-amber-400">
                       Fehlt: {info.missedTranslated.join(', ')}
                     </p>
                   )}

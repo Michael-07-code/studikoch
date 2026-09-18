@@ -38,8 +38,8 @@ function SuggestionGrid({ items }: { items: SavedRecipe[] }) {
     <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
       {items.map((s) => (
         <Card key={s.recipe.id} className="p-2 text-sm" padded={false}>
-          <p className="font-medium text-stone-100">{s.recipe.name}</p>
-          <p className="text-xs text-stone-400">
+          <p className="font-medium text-stone-900 dark:text-stone-100">{s.recipe.name}</p>
+          <p className="text-xs text-stone-500 dark:text-stone-400">
             {s.estimatedCostEuro?.toFixed(2)} €
             {s.prepTimeMinutes ? ` · ${s.prepTimeMinutes} Min.` : ''}
           </p>
@@ -80,12 +80,12 @@ export default function BudgetPanel({ settings, updateSettings }: Props) {
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-stone-400">
+      <p className="text-sm text-stone-500 dark:text-stone-400">
         Vorschläge aus deinen gespeicherten Rezepten mit Kostenangabe.
       </p>
 
       {priced.length === 0 && (
-        <Card className="border-amber-800 bg-amber-950/40 text-sm text-amber-300">
+        <Card className="border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 text-sm text-amber-800 dark:text-amber-300">
           Noch keine Vorschläge möglich: Speichere Rezepte und trage dort
           unter „Meine Angaben" eine geschätzte Kostenangabe ein.
         </Card>
@@ -102,7 +102,7 @@ export default function BudgetPanel({ settings, updateSettings }: Props) {
 
       <div className="flex flex-wrap items-end gap-4">
         {period === 'tag' ? (
-          <label className="flex flex-col text-sm text-stone-300">
+          <label className="flex flex-col text-sm text-stone-700 dark:text-stone-300">
             Tagesbudget (€)
             <input
               type="text"
@@ -114,11 +114,11 @@ export default function BudgetPanel({ settings, updateSettings }: Props) {
                   dailyBudget: Number.isNaN(v) ? undefined : v,
                 })
               }}
-              className="mt-1 w-32 rounded-xl border border-stone-700 px-2 py-1.5 text-sm"
+              className="mt-1 w-32 rounded-xl border border-stone-200 dark:border-stone-700 px-2 py-1.5 text-sm"
             />
           </label>
         ) : (
-          <label className="flex flex-col text-sm text-stone-300">
+          <label className="flex flex-col text-sm text-stone-700 dark:text-stone-300">
             Wochenbudget (€)
             <input
               type="text"
@@ -130,19 +130,19 @@ export default function BudgetPanel({ settings, updateSettings }: Props) {
                   weeklyBudget: Number.isNaN(v) ? undefined : v,
                 })
               }}
-              className="mt-1 w-32 rounded-xl border border-stone-700 px-2 py-1.5 text-sm"
+              className="mt-1 w-32 rounded-xl border border-stone-200 dark:border-stone-700 px-2 py-1.5 text-sm"
             />
           </label>
         )}
 
-        <label className="flex items-center gap-2 text-sm text-stone-300">
+        <label className="flex items-center gap-2 text-sm text-stone-700 dark:text-stone-300">
           <input
             type="checkbox"
             checked={settings.splitByMeal}
             onChange={(e) =>
               updateSettings({ splitByMeal: e.target.checked })
             }
-            className="size-4 rounded border-stone-700 text-emerald-600 focus:ring-emerald-500"
+            className="size-4 rounded border-stone-200 dark:border-stone-700 text-emerald-600 focus:ring-emerald-500"
           />
           Nach Mahlzeit trennen
         </label>
@@ -151,7 +151,7 @@ export default function BudgetPanel({ settings, updateSettings }: Props) {
       {settings.splitByMeal && dailyBase !== undefined && (
         <div className="flex flex-wrap gap-4">
           {MEAL_TYPES.map((type) => (
-            <label key={type} className="flex flex-col text-xs text-stone-300">
+            <label key={type} className="flex flex-col text-xs text-stone-700 dark:text-stone-300">
               {MEAL_TYPE_LABELS[type]} (% vom Tagesbudget)
               <input
                 type="number"
@@ -161,7 +161,7 @@ export default function BudgetPanel({ settings, updateSettings }: Props) {
                 onChange={(e) =>
                   updateMealShare(type, parseInt(e.target.value, 10) || 0)
                 }
-                className="mt-1 w-24 rounded-xl border border-stone-700 px-2 py-1"
+                className="mt-1 w-24 rounded-xl border border-stone-200 dark:border-stone-700 px-2 py-1"
               />
             </label>
           ))}
@@ -169,7 +169,7 @@ export default function BudgetPanel({ settings, updateSettings }: Props) {
       )}
 
       {dailyBase === undefined ? (
-        <p className="text-sm text-stone-400">
+        <p className="text-sm text-stone-500 dark:text-stone-400">
           Trage oben ein Budget ein, um Vorschläge zu sehen.
         </p>
       ) : settings.splitByMeal ? (
@@ -178,7 +178,7 @@ export default function BudgetPanel({ settings, updateSettings }: Props) {
             const budget = (dailyBase * settings.mealShare[type]) / 100
             return (
               <div key={type}>
-                <h3 className="mb-2 text-sm font-semibold text-stone-100">
+                <h3 className="mb-2 text-sm font-semibold text-stone-900 dark:text-stone-100">
                   {MEAL_TYPE_LABELS[type]} · Budget {budget.toFixed(2)} €
                 </h3>
                 <SuggestionGrid
@@ -190,7 +190,7 @@ export default function BudgetPanel({ settings, updateSettings }: Props) {
         </div>
       ) : (
         <div>
-          <h3 className="mb-2 text-sm font-semibold text-stone-100">
+          <h3 className="mb-2 text-sm font-semibold text-stone-900 dark:text-stone-100">
             Passende Rezepte · Budget {dailyBase.toFixed(2)} €
           </h3>
           <SuggestionGrid items={suggestionsFor(priced, dailyBase)} />

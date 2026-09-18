@@ -53,13 +53,13 @@ export default function UseItUpFinder() {
 
   if (!hasSpoonacularKey()) {
     return (
-      <Card className="text-sm text-stone-300">
+      <Card className="text-sm text-stone-700 dark:text-stone-300">
         Kein Spoonacular-API-Key gefunden. Kostenlos erstellen auf{' '}
         <a
           href="https://spoonacular.com/food-api"
           target="_blank"
           rel="noreferrer"
-          className="text-emerald-400 underline"
+          className="text-emerald-700 dark:text-emerald-400 underline"
         >
           spoonacular.com/food-api
         </a>
@@ -165,8 +165,8 @@ export default function UseItUpFinder() {
               onClick={() => toggle(ing.name)}
               className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                 selected.has(ing.name)
-                  ? 'bg-amber-900/40 text-amber-300 ring-1 ring-amber-600'
-                  : 'bg-stone-800 text-stone-300 hover:bg-stone-700'
+                  ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 ring-1 ring-amber-400 dark:ring-amber-600'
+                  : 'bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700'
               }`}
             >
               {ing.name}
@@ -182,8 +182,8 @@ export default function UseItUpFinder() {
             onClick={() => toggle(name)}
             className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
               selected.has(name)
-                ? 'bg-amber-900/40 text-amber-300 ring-1 ring-amber-600'
-                : 'bg-stone-800 text-stone-300 hover:bg-stone-700'
+                ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 ring-1 ring-amber-400 dark:ring-amber-600'
+                : 'bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700'
             }`}
           >
             {name}
@@ -203,7 +203,7 @@ export default function UseItUpFinder() {
             }
           }}
           placeholder="Weitere Zutat (nicht im Inventar)"
-          className="min-w-[10rem] flex-1 rounded-xl border border-stone-700 px-3 py-1.5 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+          className="min-w-[10rem] flex-1 rounded-xl border border-stone-200 dark:border-stone-700 px-3 py-1.5 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
         />
         <Button type="button" variant="outline" size="sm" onClick={addCustom}>
           Hinzufügen
@@ -214,11 +214,11 @@ export default function UseItUpFinder() {
         {loading ? 'Suche …' : `Rezeptvorschlag (${selected.size} Zutat(en))`}
       </Button>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
       {fromCache && !error && (
         <Hint>📦 Zwischengespeichertes Ergebnis (spart Tageskontingent).</Hint>
       )}
-      {recipeLoading && <p className="text-sm text-stone-400">Lade Rezeptdetails …</p>}
+      {recipeLoading && <p className="text-sm text-stone-500 dark:text-stone-400">Lade Rezeptdetails …</p>}
 
       {recipe && !recipeLoading && (
         <RecipeDetail
@@ -244,7 +244,7 @@ export default function UseItUpFinder() {
             />
           )}
           <div className="space-y-2 p-4">
-            <p className="text-lg font-semibold text-stone-100">
+            <p className="text-lg font-semibold text-stone-900 dark:text-stone-100">
               {activeInfo?.name ?? active.name}
             </p>
             {activeInfo && activeInfo.usedTranslated.length > 0 && (
@@ -257,7 +257,7 @@ export default function UseItUpFinder() {
               </div>
             )}
             {activeInfo && activeInfo.missedTranslated.length > 0 && (
-              <p className="text-sm text-amber-400">
+              <p className="text-sm text-amber-700 dark:text-amber-400">
                 Fehlt noch: {activeInfo.missedTranslated.join(', ')}
               </p>
             )}

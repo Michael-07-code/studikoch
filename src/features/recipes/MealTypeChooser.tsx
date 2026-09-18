@@ -19,8 +19,8 @@ export default function MealTypeChooser({
   onCancel: () => void
 }) {
   return (
-    <div className="space-y-2 rounded-xl border border-stone-700 bg-stone-800 p-3">
-      <p className="text-sm font-medium text-stone-300">
+    <div className="space-y-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-100 dark:bg-stone-800 p-3">
+      <p className="text-sm font-medium text-stone-700 dark:text-stone-300">
         Wann isst du das meistens?
       </p>
       <div className="flex flex-wrap gap-2">
@@ -39,7 +39,7 @@ export default function MealTypeChooser({
       <button
         type="button"
         onClick={onCancel}
-        className="text-xs text-stone-400 underline"
+        className="text-xs text-stone-500 dark:text-stone-400 underline"
       >
         Abbrechen
       </button>

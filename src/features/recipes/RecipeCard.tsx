@@ -12,7 +12,7 @@ export default function RecipeCard({ recipe, displayName, onSelect }: Props) {
   return (
     <button
       onClick={onSelect}
-      className="flex flex-col overflow-hidden rounded-2xl border border-stone-700/70 bg-stone-900 text-left shadow-card transition-shadow hover:shadow-card-hover"
+      className="flex flex-col overflow-hidden rounded-2xl border border-stone-200/70 dark:border-stone-700/70 bg-white dark:bg-stone-900 text-left shadow-card transition-shadow hover:shadow-card-hover"
     >
       {recipe.thumbnail && (
         <img
@@ -23,7 +23,7 @@ export default function RecipeCard({ recipe, displayName, onSelect }: Props) {
         />
       )}
       <div className="p-3">
-        <p className="text-sm font-medium text-stone-100">{displayName}</p>
+        <p className="text-sm font-medium text-stone-900 dark:text-stone-100">{displayName}</p>
       </div>
     </button>
   )

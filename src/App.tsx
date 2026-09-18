@@ -26,7 +26,7 @@ function AppRoutes() {
   }
 
   if (loading) {
-    return <p className="p-6 text-sm text-stone-400">Lade …</p>
+    return <p className="p-6 text-sm text-stone-500 dark:text-stone-400">Lade …</p>
   }
 
   if (!session) {

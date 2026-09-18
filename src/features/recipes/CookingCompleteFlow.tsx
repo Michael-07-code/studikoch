@@ -185,12 +185,12 @@ export default function CookingCompleteFlow({ recipe, servings }: Props) {
               { label: 'Kohlenhydrate', value: nutritionSummary.carbsG, unit: 'g' },
               { label: 'Fett', value: nutritionSummary.fatG, unit: 'g' },
             ].map((r) => (
-              <div key={r.label} className="rounded-xl bg-stone-800 px-3 py-2 text-center">
-                <p className="text-base font-semibold text-stone-100">
+              <div key={r.label} className="rounded-xl bg-stone-100 dark:bg-stone-800 px-3 py-2 text-center">
+                <p className="text-base font-semibold text-stone-900 dark:text-stone-100">
                   {r.value}
-                  <span className="ml-0.5 text-xs font-normal text-stone-400">{r.unit}</span>
+                  <span className="ml-0.5 text-xs font-normal text-stone-500 dark:text-stone-400">{r.unit}</span>
                 </p>
-                <p className="text-xs text-stone-400">{r.label}</p>
+                <p className="text-xs text-stone-500 dark:text-stone-400">{r.label}</p>
               </div>
             ))}
           </div>
@@ -201,7 +201,7 @@ export default function CookingCompleteFlow({ recipe, servings }: Props) {
 
   return (
     <Card className="space-y-3">
-      <h3 className="text-sm font-semibold text-stone-100">
+      <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100">
         Welche Zutaten hast du verwendet?
       </h3>
       <Hint>Abwählen oder Menge anpassen, falls abweichend. Wird vom Inventar abgezogen.</Hint>
@@ -212,9 +212,9 @@ export default function CookingCompleteFlow({ recipe, servings }: Props) {
               type="checkbox"
               checked={item.checked}
               onChange={(e) => updateItem(i, { checked: e.target.checked })}
-              className="size-4 rounded border-stone-700 text-emerald-600 focus:ring-emerald-500"
+              className="size-4 rounded border-stone-200 dark:border-stone-700 text-emerald-600 focus:ring-emerald-500"
             />
-            <span className="flex-1 text-stone-800">{item.name}</span>
+            <span className="flex-1 text-stone-900 dark:text-stone-100">{item.name}</span>
             {item.amount !== undefined && (
               <input
                 type="text"
@@ -225,33 +225,33 @@ export default function CookingCompleteFlow({ recipe, servings }: Props) {
                   const v = parseFloat(e.target.value.replace(',', '.'))
                   updateItem(i, { amount: Number.isNaN(v) ? 0 : v })
                 }}
-                className="w-16 rounded-xl border border-stone-700 px-2 py-1 text-sm disabled:opacity-50"
+                className="w-16 rounded-xl border border-stone-200 dark:border-stone-700 px-2 py-1 text-sm disabled:opacity-50"
               />
             )}
-            {item.unit && <span className="w-10 text-xs text-stone-400">{item.unit}</span>}
+            {item.unit && <span className="w-10 text-xs text-stone-500 dark:text-stone-400">{item.unit}</span>}
           </li>
         ))}
       </ul>
 
-      <div className="space-y-2 border-t border-stone-800 pt-3">
-        <p className="text-sm font-medium text-stone-300">
+      <div className="space-y-2 border-t border-stone-100 dark:border-stone-800 pt-3">
+        <p className="text-sm font-medium text-stone-700 dark:text-stone-300">
           Zusätzliche Zutat verwendet (nicht im Rezept)?
         </p>
         <Hint>Scannen liefert Nährwerte für die kombinierte Nährwerttabelle am Ende.</Hint>
         {extras.map((extra, i) => (
           <div key={`${extra.name}-${i}`} className="flex items-center gap-2 text-sm">
-            <span className="flex-1 text-stone-800">{extra.name}</span>
+            <span className="flex-1 text-stone-900 dark:text-stone-100">{extra.name}</span>
             <input
               type="number"
               min={0}
               value={extra.amountG}
               onChange={(e) => updateExtra(i, parseInt(e.target.value, 10) || 0)}
-              className="w-20 rounded-xl border border-stone-700 px-2 py-1 text-sm"
+              className="w-20 rounded-xl border border-stone-200 dark:border-stone-700 px-2 py-1 text-sm"
             />
-            <span className="text-xs text-stone-400">g</span>
+            <span className="text-xs text-stone-500 dark:text-stone-400">g</span>
             <button
               onClick={() => removeExtra(i)}
-              className="text-xs text-stone-500 hover:text-red-400"
+              className="text-xs text-stone-400 dark:text-stone-500 hover:text-red-600 dark:hover:text-red-400"
             >
               Entfernen
             </button>

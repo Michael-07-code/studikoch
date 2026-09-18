@@ -172,7 +172,7 @@ export default function RecipesPage() {
 
       {mode === 'suche' && (
         <>
-          <div className="inline-flex rounded-xl border border-stone-700 bg-stone-800 p-1 text-sm">
+          <div className="inline-flex rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-100 dark:bg-stone-800 p-1 text-sm">
             {(
               [
                 { id: 'name', label: 'Nach Name' },
@@ -190,8 +190,8 @@ export default function RecipesPage() {
                 }}
                 className={`rounded-lg px-3 py-1.5 font-medium transition-colors ${
                   searchBy === opt.id
-                    ? 'bg-stone-900 text-stone-100 shadow-sm'
-                    : 'text-stone-400 hover:text-stone-300'
+                    ? 'bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 shadow-sm'
+                    : 'text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300'
                 }`}
               >
                 {opt.label}
@@ -209,7 +209,7 @@ export default function RecipesPage() {
                   ? 'z. B. Pasta (englisch eingeben)'
                   : 'z. B. chicken, rice'
               }
-              className="min-w-[12rem] flex-1 rounded-xl border border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="min-w-[12rem] flex-1 rounded-xl border border-stone-200 dark:border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             />
             <Button type="submit" disabled={loading}>
               Suchen
@@ -227,10 +227,10 @@ export default function RecipesPage() {
         </>
       )}
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
-      {loading && <p className="text-sm text-stone-400">Lade Rezepte …</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {loading && <p className="text-sm text-stone-500 dark:text-stone-400">Lade Rezepte …</p>}
       {detailLoading && (
-        <p className="text-sm text-stone-400">Lade Rezeptdetails …</p>
+        <p className="text-sm text-stone-500 dark:text-stone-400">Lade Rezeptdetails …</p>
       )}
 
       {mode === 'suche' && selected && !detailLoading && (
@@ -250,7 +250,7 @@ export default function RecipesPage() {
         !loading &&
         hasSearched &&
         results.length === 0 && (
-          <p className="text-sm text-stone-400">
+          <p className="text-sm text-stone-500 dark:text-stone-400">
             Keine Rezepte gefunden. Versuche einen anderen (englischen)
             Begriff.
           </p>

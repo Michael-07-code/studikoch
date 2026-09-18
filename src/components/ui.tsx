@@ -14,11 +14,11 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react'
 export type SectionTone = 'emerald' | 'amber' | 'sky' | 'violet' | 'neutral'
 
 const SECTION_TONE_CLASSES: Record<SectionTone, string> = {
-  emerald: 'bg-emerald-500/15 text-emerald-400',
-  amber: 'bg-amber-500/15 text-amber-400',
-  sky: 'bg-sky-500/15 text-sky-400',
-  violet: 'bg-violet-500/15 text-violet-400',
-  neutral: 'bg-stone-800 text-stone-300',
+  emerald: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400',
+  amber: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
+  sky: 'bg-sky-500/15 text-sky-700 dark:text-sky-400',
+  violet: 'bg-violet-500/15 text-violet-700 dark:text-violet-400',
+  neutral: 'bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300',
 }
 
 export function PageHeader({
@@ -45,11 +45,11 @@ export function PageHeader({
           </span>
         )}
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-stone-100">
+          <h1 className="text-2xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
             {title}
           </h1>
           {description && (
-            <p className="mt-1 max-w-2xl text-sm text-stone-400">
+            <p className="mt-1 max-w-2xl text-sm text-stone-500 dark:text-stone-400">
               {description}
             </p>
           )}
@@ -71,7 +71,7 @@ export function Card({
 }) {
   return (
     <div
-      className={`rounded-2xl border border-stone-700/80 bg-stone-900 shadow-card ${
+      className={`rounded-2xl border border-stone-200/80 dark:border-stone-700/80 bg-white dark:bg-stone-900 shadow-card ${
         padded ? 'p-4' : ''
       } ${className}`}
     >
@@ -92,11 +92,11 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary:
     'bg-emerald-600 text-white shadow-sm shadow-emerald-950/40 hover:bg-emerald-500 hover:shadow-md hover:shadow-emerald-950/50 disabled:hover:bg-emerald-600 disabled:shadow-none',
   secondary:
-    'bg-emerald-900/40 text-emerald-300 border border-emerald-800 hover:bg-emerald-900/60 disabled:hover:bg-emerald-900/40',
+    'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 disabled:hover:bg-emerald-900/40',
   outline:
-    'border-2 border-emerald-500 text-emerald-400 hover:bg-emerald-950/40 disabled:hover:bg-transparent',
-  ghost: 'text-stone-300 hover:bg-stone-800 disabled:hover:bg-transparent',
-  danger: 'text-red-400 hover:bg-red-950/30 disabled:hover:bg-transparent',
+    'border-2 border-emerald-500 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 disabled:hover:bg-transparent',
+  ghost: 'text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 disabled:hover:bg-transparent',
+  danger: 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 disabled:hover:bg-transparent',
 }
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
@@ -135,9 +135,9 @@ export function Badge({
   tone?: 'neutral' | 'brand' | 'warning'
 }) {
   const toneClasses = {
-    neutral: 'bg-stone-800 text-stone-300',
-    brand: 'bg-emerald-900/40 text-emerald-300',
-    warning: 'bg-amber-900/40 text-amber-300',
+    neutral: 'bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300',
+    brand: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300',
+    warning: 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300',
   }[tone]
   return (
     <span
@@ -150,7 +150,7 @@ export function Badge({
 
 export function EmptyState({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-2xl border border-dashed border-stone-700 bg-stone-900/60 p-6 text-center text-sm text-stone-400">
+    <div className="rounded-2xl border border-dashed border-stone-200 dark:border-stone-700 bg-stone-50/60 dark:bg-stone-900/60 p-6 text-center text-sm text-stone-500 dark:text-stone-400">
       {children}
     </div>
   )
@@ -160,7 +160,7 @@ export function EmptyState({ children }: { children: ReactNode }) {
 // Fließtext-Absätze auf jeder Seite standen (siehe Nutzerwunsch "unnötige
 // Texterklärungen entfernen") – ein Satz statt eines Absatzes.
 export function Hint({ children }: { children: ReactNode }) {
-  return <p className="text-xs text-stone-400">{children}</p>
+  return <p className="text-xs text-stone-500 dark:text-stone-400">{children}</p>
 }
 
 export function TabBar({
@@ -173,15 +173,15 @@ export function TabBar({
   onChange: (id: string) => void
 }) {
   return (
-    <div className="flex gap-1 overflow-x-auto border-b border-stone-700">
+    <div className="flex gap-1 overflow-x-auto border-b border-stone-200 dark:border-stone-700">
       {tabs.map((t) => (
         <button
           key={t.id}
           onClick={() => onChange(t.id)}
           className={`shrink-0 whitespace-nowrap rounded-t-lg px-3 py-2 text-sm font-medium transition-colors ${
             active === t.id
-              ? 'border-b-2 border-emerald-500 text-emerald-400'
-              : 'text-stone-400 hover:text-stone-200'
+              ? 'border-b-2 border-emerald-500 text-emerald-700 dark:text-emerald-400'
+              : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200'
           }`}
         >
           {t.label}
@@ -209,12 +209,12 @@ export function QuickLinkCard({
   return (
     <button
       onClick={onClick}
-      className="flex items-start gap-3 rounded-2xl border border-stone-700/70 bg-stone-900 p-3 text-left shadow-card transition-all hover:-translate-y-0.5 hover:shadow-card-hover active:translate-y-0"
+      className="flex items-start gap-3 rounded-2xl border border-stone-200/70 dark:border-stone-700/70 bg-white dark:bg-stone-900 p-3 text-left shadow-card transition-all hover:-translate-y-0.5 hover:shadow-card-hover active:translate-y-0"
     >
       <span className="text-2xl leading-none">{icon}</span>
       <span>
-        <span className="block text-sm font-semibold text-stone-100">{title}</span>
-        <span className="block text-xs text-stone-400">{description}</span>
+        <span className="block text-sm font-semibold text-stone-900 dark:text-stone-100">{title}</span>
+        <span className="block text-xs text-stone-500 dark:text-stone-400">{description}</span>
       </span>
     </button>
   )

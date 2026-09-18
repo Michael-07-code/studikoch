@@ -17,6 +17,38 @@ export default function SettingsPage() {
         tone="neutral"
       />
 
+      <Card className="space-y-3">
+        <span className="block text-sm font-medium text-stone-900 dark:text-stone-100">
+          Darstellung
+        </span>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => updateAppSettings({ theme: 'light' })}
+            className={`flex-1 rounded-xl border px-3 py-2 text-sm font-medium transition-colors ${
+              appSettings.theme === 'light'
+                ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                : 'border-stone-200 text-stone-500 hover:bg-stone-100 dark:border-stone-700 dark:text-stone-400 dark:hover:bg-stone-800'
+            }`}
+          >
+            ☀️ Hell
+          </button>
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => updateAppSettings({ theme: 'dark' })}
+            className={`flex-1 rounded-xl border px-3 py-2 text-sm font-medium transition-colors ${
+              appSettings.theme === 'dark'
+                ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                : 'border-stone-200 text-stone-500 hover:bg-stone-100 dark:border-stone-700 dark:text-stone-400 dark:hover:bg-stone-800'
+            }`}
+          >
+            🌙 Dunkel
+          </button>
+        </div>
+      </Card>
+
       <Card className="space-y-2">
         <label className="flex items-start gap-3">
           <input
@@ -26,13 +58,13 @@ export default function SettingsPage() {
             onChange={(e) =>
               updateAppSettings({ askMealTypeOnSave: e.target.checked })
             }
-            className="mt-0.5 size-4 rounded border-stone-700 text-emerald-600 focus:ring-emerald-500"
+            className="mt-0.5 size-4 rounded border-stone-200 dark:border-stone-700 text-emerald-600 focus:ring-emerald-500"
           />
           <span>
-            <span className="block text-sm font-medium text-stone-100">
+            <span className="block text-sm font-medium text-stone-900 dark:text-stone-100">
               Beim Speichern eines Rezepts nach der Mahlzeit fragen
             </span>
-            <span className="block text-sm text-stone-400">
+            <span className="block text-sm text-stone-500 dark:text-stone-400">
               Frühstück, Mittagessen oder Abendessen direkt beim Speichern
               festlegen. Ausgeschaltet: Rezepte werden ohne Nachfrage als
               „Sonstiges" gespeichert, du kannst die Mahlzeit später jederzeit

@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { useUserSettings } from './useUserSettings'
+import type { Theme } from './theme'
 
 // Kleine Verhaltens-Einstellungen der App, die nirgendwo sonst thematisch
 // hinpassen (siehe user_settings.app_settings in supabase/schema.sql).
@@ -12,11 +13,16 @@ export interface AppSettings {
   // dem Preis in diesem Supermarkt angelegt, statt jeweils dem einzeln
   // günstigsten Laden über mehrere Märkte verteilt zu werden.
   preferredSupermarketId: string | null
+  // Hell/Dunkel – geräteübergreifend gespeichert wie alle anderen
+  // Einstellungen. Wird zusätzlich lokal zwischengespeichert (lib/theme.ts),
+  // damit die Seite beim Laden nicht kurz im falschen Modus aufblitzt.
+  theme: Theme
 }
 
 const DEFAULT_APP_SETTINGS: AppSettings = {
   askMealTypeOnSave: true,
   preferredSupermarketId: null,
+  theme: 'dark',
 }
 
 export function useAppSettings() {
@@ -33,7 +39,12 @@ export function useAppSettings() {
       return patch({ app_settings: { ...appSettings, ...patchValue } })
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [patch, appSettings.askMealTypeOnSave, appSettings.preferredSupermarketId],
+    [
+      patch,
+      appSettings.askMealTypeOnSave,
+      appSettings.preferredSupermarketId,
+      appSettings.theme,
+    ],
   )
 
   return { appSettings, updateAppSettings, loading }

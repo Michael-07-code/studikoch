@@ -51,13 +51,13 @@ export default function BudgetSearch() {
 
   if (!hasSpoonacularKey()) {
     return (
-      <Card className="text-sm text-stone-300">
+      <Card className="text-sm text-stone-700 dark:text-stone-300">
         Kein Spoonacular-API-Key gefunden. Kostenlos erstellen auf{' '}
         <a
           href="https://spoonacular.com/food-api"
           target="_blank"
           rel="noreferrer"
-          className="text-emerald-400 underline"
+          className="text-emerald-700 dark:text-emerald-400 underline"
         >
           spoonacular.com/food-api
         </a>
@@ -156,10 +156,10 @@ export default function BudgetSearch() {
         <Hint>📦 Kontingent aufgebraucht – zeige zwischengespeicherte Rezepte.</Hint>
       )}
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
-      {loading && <p className="text-sm text-stone-400">Suche …</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {loading && <p className="text-sm text-stone-500 dark:text-stone-400">Suche …</p>}
       {detailLoading && (
-        <p className="text-sm text-stone-400">Lade Rezeptdetails …</p>
+        <p className="text-sm text-stone-500 dark:text-stone-400">Lade Rezeptdetails …</p>
       )}
 
       {selected && !detailLoading && (
@@ -195,7 +195,7 @@ export default function BudgetSearch() {
               <button
                 key={s.recipe.id}
                 onClick={() => handleSelect(s)}
-                className="flex flex-col overflow-hidden rounded-2xl border border-stone-700/70 bg-stone-900 text-left shadow-card transition-shadow hover:shadow-card-hover"
+                className="flex flex-col overflow-hidden rounded-2xl border border-stone-200/70 dark:border-stone-700/70 bg-white dark:bg-stone-900 text-left shadow-card transition-shadow hover:shadow-card-hover"
               >
                 {s.recipe.thumbnail && (
                   <img
@@ -206,10 +206,10 @@ export default function BudgetSearch() {
                   />
                 )}
                 <div className="p-3">
-                  <p className="text-sm font-medium text-stone-100">
+                  <p className="text-sm font-medium text-stone-900 dark:text-stone-100">
                     {displayNames[s.recipe.id] ?? s.recipe.name}
                   </p>
-                  <p className="mt-1 text-xs text-stone-400">
+                  <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
                     {[
                       s.prepTimeMinutes ? `${s.prepTimeMinutes} Min.` : null,
                       s.estimatedCostEuro !== null
@@ -220,7 +220,7 @@ export default function BudgetSearch() {
                       .join(' · ')}
                   </p>
                   {missing.length > 0 && (
-                    <p className="mt-1 text-xs text-red-400">
+                    <p className="mt-1 text-xs text-red-600 dark:text-red-400">
                       Fehlt: {missing.map((m) => m.label).join(', ')}
                     </p>
                   )}

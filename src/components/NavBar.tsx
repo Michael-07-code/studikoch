@@ -25,7 +25,7 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
   `rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
     isActive
       ? 'bg-emerald-600 text-white'
-      : 'text-stone-300 hover:bg-stone-800 hover:text-white'
+      : 'text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 hover:text-stone-900 dark:hover:text-white'
   }`
 
 export default function NavBar() {
@@ -40,11 +40,11 @@ export default function NavBar() {
   }, [location.pathname])
 
   return (
-    <nav className="sticky top-0 z-20 border-b border-stone-800 bg-stone-900/95 backdrop-blur">
+    <nav className="sticky top-0 z-20 border-b border-stone-100 dark:border-stone-800 bg-white/95 dark:bg-stone-900/95 backdrop-blur">
       <div className="mx-auto flex max-w-4xl items-center gap-1 px-4 py-3">
         <Link
           to="/"
-          className="mr-2 flex-1 text-lg font-extrabold tracking-tight text-emerald-400 transition-colors hover:text-emerald-300 lg:flex-none"
+          className="mr-2 flex-1 text-lg font-extrabold tracking-tight text-emerald-700 dark:text-emerald-400 transition-colors hover:text-emerald-800 dark:hover:text-emerald-300 lg:flex-none"
         >
           🍲 StudiKoch
         </Link>
@@ -68,7 +68,7 @@ export default function NavBar() {
 
         <div className="hidden items-center gap-2 lg:flex">
           {session?.user.email && (
-            <span className="hidden text-xs text-stone-400 xl:inline">
+            <span className="hidden text-xs text-stone-500 dark:text-stone-400 xl:inline">
               {session.user.email}
             </span>
           )}
@@ -79,7 +79,7 @@ export default function NavBar() {
               `rounded-xl p-2 text-sm font-medium transition-colors ${
                 isActive
                   ? 'bg-emerald-600 text-white'
-                  : 'text-stone-300 hover:bg-stone-800 hover:text-white'
+                  : 'text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 hover:text-stone-900 dark:hover:text-white'
               }`
             }
           >
@@ -87,7 +87,7 @@ export default function NavBar() {
           </NavLink>
           <button
             onClick={() => supabase?.auth.signOut()}
-            className="rounded-xl px-3 py-1.5 text-sm font-medium text-stone-300 hover:bg-stone-800 hover:text-white"
+            className="rounded-xl px-3 py-1.5 text-sm font-medium text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 hover:text-stone-900 dark:hover:text-white"
           >
             Abmelden
           </button>
@@ -98,7 +98,7 @@ export default function NavBar() {
           onClick={() => setMenuOpen((open) => !open)}
           aria-expanded={menuOpen}
           aria-label={menuOpen ? 'Menü schließen' : 'Menü öffnen'}
-          className="rounded-xl p-2 text-stone-300 hover:bg-stone-800 hover:text-white lg:hidden"
+          className="rounded-xl p-2 text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 hover:text-stone-900 dark:hover:text-white lg:hidden"
         >
           {menuOpen ? (
             <span className="block text-xl leading-none">✕</span>
@@ -113,7 +113,7 @@ export default function NavBar() {
       </div>
 
       {menuOpen && (
-        <div className="border-t border-stone-800 px-4 py-3 lg:hidden">
+        <div className="border-t border-stone-100 dark:border-stone-800 px-4 py-3 lg:hidden">
           <div className="flex flex-col gap-1">
             {links.map((link) => (
               <NavLink
@@ -126,23 +126,23 @@ export default function NavBar() {
               </NavLink>
             ))}
           </div>
-          <div className="mt-3 flex items-center justify-between gap-2 border-t border-stone-800 pt-3">
+          <div className="mt-3 flex items-center justify-between gap-2 border-t border-stone-100 dark:border-stone-800 pt-3">
             <NavLink
               to="/einstellungen"
               end
-              className="shrink-0 rounded-xl px-3 py-1.5 text-sm font-medium text-stone-300 hover:bg-stone-800 hover:text-white"
+              className="shrink-0 rounded-xl px-3 py-1.5 text-sm font-medium text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 hover:text-stone-900 dark:hover:text-white"
             >
               ⚙️ Einstellungen
             </NavLink>
             <button
               onClick={() => supabase?.auth.signOut()}
-              className="shrink-0 rounded-xl px-3 py-1.5 text-sm font-medium text-stone-300 hover:bg-stone-800 hover:text-white"
+              className="shrink-0 rounded-xl px-3 py-1.5 text-sm font-medium text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 hover:text-stone-900 dark:hover:text-white"
             >
               Abmelden
             </button>
           </div>
           {session?.user.email && (
-            <p className="mt-2 truncate text-xs text-stone-400">
+            <p className="mt-2 truncate text-xs text-stone-500 dark:text-stone-400">
               {session.user.email}
             </p>
           )}

@@ -44,7 +44,7 @@ export default function ShoppingListView({
 }: Props) {
   if (items.length === 0) {
     return (
-      <p className="text-sm text-stone-400">
+      <p className="text-sm text-stone-500 dark:text-stone-400">
         Deine Einkaufsliste ist noch leer.
       </p>
     )
@@ -94,11 +94,11 @@ export default function ShoppingListView({
         return (
           <div key={marketName}>
             <div className="mb-1 flex items-baseline justify-between">
-              <h3 className="text-sm font-semibold text-stone-100">
+              <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100">
                 {marketName}
               </h3>
               {marketTotal > 0 && (
-                <span className="text-xs text-stone-400">
+                <span className="text-xs text-stone-500 dark:text-stone-400">
                   {marketTotal.toFixed(2)} €
                 </span>
               )}
@@ -110,10 +110,10 @@ export default function ShoppingListView({
                 )
                 return (
                   <div key={cat}>
-                    <h4 className="mb-1 pl-1 text-xs font-medium uppercase tracking-wide text-stone-500">
+                    <h4 className="mb-1 pl-1 text-xs font-medium uppercase tracking-wide text-stone-400 dark:text-stone-500">
                       {CATEGORY_LABELS[cat]}
                     </h4>
-                    <ul className="divide-y divide-stone-700 rounded-xl border border-stone-700 bg-stone-900 shadow-card">
+                    <ul className="divide-y divide-stone-200 dark:divide-stone-700 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 shadow-card">
                       {catItems.map((item) => {
                         const cheaperElsewhere = getCheapestElsewhere?.(
                           item.name,
@@ -133,16 +133,16 @@ export default function ShoppingListView({
                               type="checkbox"
                               checked={item.checked}
                               onChange={() => onToggle(item.id)}
-                              className="size-4 rounded border-stone-700 text-emerald-600 focus:ring-emerald-500"
+                              className="size-4 rounded border-stone-200 dark:border-stone-700 text-emerald-600 focus:ring-emerald-500"
                             />
                             <span
                               className={`flex-1 ${
-                                item.checked ? 'text-stone-500 line-through' : ''
+                                item.checked ? 'text-stone-400 dark:text-stone-500 line-through' : ''
                               }`}
                             >
                               {item.name}
                               {(item.amount !== undefined || item.unit) && (
-                                <span className="text-stone-500">
+                                <span className="text-stone-400 dark:text-stone-500">
                                   {' '}
                                   — {item.amount ?? ''} {item.unit ?? ''}
                                 </span>
@@ -155,13 +155,13 @@ export default function ShoppingListView({
                               )}
                             </span>
                             {item.price !== undefined && (
-                              <span className="text-stone-400">
+                              <span className="text-stone-500 dark:text-stone-400">
                                 {item.price.toFixed(2)} €
                               </span>
                             )}
                             <button
                               onClick={() => onRemove(item.id)}
-                              className="text-stone-500 transition-colors hover:text-red-400"
+                              className="text-stone-400 dark:text-stone-500 transition-colors hover:text-red-600 dark:hover:text-red-400"
                               aria-label={`${item.name} entfernen`}
                             >
                               Entfernen
@@ -178,12 +178,12 @@ export default function ShoppingListView({
         )
       })}
 
-      <div className="flex justify-between border-t border-stone-700 pt-3 text-sm font-medium text-stone-100">
+      <div className="flex justify-between border-t border-stone-200 dark:border-stone-700 pt-3 text-sm font-medium text-stone-900 dark:text-stone-100">
         <span>Gesamt (geschätzt)</span>
         <span>{total.toFixed(2)} €</span>
       </div>
       {totalChecked > 0 && (
-        <div className="flex justify-between text-xs text-stone-400">
+        <div className="flex justify-between text-xs text-stone-500 dark:text-stone-400">
           <span>Bereits im Wagen</span>
           <span>{totalChecked.toFixed(2)} €</span>
         </div>

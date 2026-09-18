@@ -146,7 +146,7 @@ export default function AddItemForm({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Artikel, z. B. Milch"
-            className="w-full flex-1 rounded-xl border border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            className="w-full flex-1 rounded-xl border border-stone-200 dark:border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
           />
           <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
             <input
@@ -155,26 +155,26 @@ export default function AddItemForm({
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="Menge"
-              className="w-full rounded-xl border border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:w-20"
+              className="w-full rounded-xl border border-stone-200 dark:border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:w-20"
             />
             <input
               type="text"
               value={unit}
               onChange={(e) => setUnit(e.target.value)}
               placeholder="Einheit"
-              className="w-full rounded-xl border border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:w-24"
+              className="w-full rounded-xl border border-stone-200 dark:border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:w-24"
             />
           </div>
         </div>
 
         {bestAutoMatch && willAutoAttachPrice && (
-          <p className="text-xs font-medium text-emerald-400">
+          <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
             💶 {bestAutoMatch.price.toFixed(2)} € bei{' '}
             {storeLabel(bestAutoMatch.store)}
           </p>
         )}
         {notAvailableAtPreferred && (
-          <p className="text-xs text-amber-400">
+          <p className="text-xs text-amber-700 dark:text-amber-400">
             Nicht bei {preferredMarketName} gefunden – Artikel wird ohne Preis
             angelegt.
           </p>
@@ -184,7 +184,7 @@ export default function AddItemForm({
           <button
             type="button"
             onClick={() => setShowAdvanced((v) => !v)}
-            className="text-xs font-medium text-emerald-400 underline"
+            className="text-xs font-medium text-emerald-700 dark:text-emerald-400 underline"
           >
             {showAdvanced ? 'Weniger Optionen' : 'Mehr Optionen'}
           </button>
@@ -194,11 +194,11 @@ export default function AddItemForm({
         </div>
 
         {showAdvanced && (
-          <div className="grid grid-cols-1 gap-2 border-t border-stone-800 pt-2 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2 border-t border-stone-100 dark:border-stone-800 pt-2 sm:grid-cols-3">
             <select
               value={supermarketId}
               onChange={(e) => setSupermarketId(e.target.value)}
-              className="rounded-xl border border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="rounded-xl border border-stone-200 dark:border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             >
               <option value="">Automatisch (günstigster Supermarkt)</option>
               {supermarkets.map((s) => (
@@ -213,12 +213,12 @@ export default function AddItemForm({
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               placeholder="Preis € (manuell)"
-              className="rounded-xl border border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="rounded-xl border border-stone-200 dark:border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             />
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value as ItemCategory | '')}
-              className="rounded-xl border border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="rounded-xl border border-stone-200 dark:border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             >
               <option value="">
                 Automatisch{' '}

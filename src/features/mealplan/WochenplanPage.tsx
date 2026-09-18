@@ -5,12 +5,13 @@ import BudgetPanel from '../budget/BudgetPage'
 import { useShoppingList } from '../shopping-list/useShoppingList'
 import {
   getLastFetchSource,
-  getRecipeInformation,
   hasSpoonacularKey,
   searchBudgetRecipes,
   SpoonacularQuotaError,
   type BudgetRecipeSuggestion,
 } from '../recipes/spoonacular'
+import { getRandomRecipesForMeal } from '../recipes/mealdb'
+import { getFullRecipeDetails } from '../recipes/recipeSource'
 import { translateRecipe } from '../recipes/translateRecipe'
 import { translateText } from '../../lib/translate'
 import { recipeToShoppingListInputs } from '../recipes/toShoppingListItem'
@@ -46,6 +47,18 @@ const DISH_TYPE_BY_MEAL: Record<BudgetMealType, string> = {
   fruehstueck: 'breakfast',
   mittagessen: 'main course',
   abendessen: 'main course',
+}
+
+// TheMealDB-Rezepte (siehe unten, Ersatzquelle bei aufgebrauchtem
+// Spoonacular-Kontingent) haben keine Zeit-/Kostenangabe – die restliche
+// Logik (toSlot, Kostensumme, Anzeige) behandelt "null" hier genauso wie
+// Spoonacular es für unbekannte Werte auch tun würde.
+function toFallbackSuggestions(recipes: Recipe[]): BudgetRecipeSuggestion[] {
+  return recipes.map((recipe) => ({
+    recipe,
+    prepTimeMinutes: recipe.prepTimeMinutes ?? null,
+    estimatedCostEuro: recipe.estimatedCostEuro ?? null,
+  }))
 }
 
 function toSlot(
@@ -114,12 +127,25 @@ export default function WochenplanPage() {
 
       for (const mealType of MEAL_TYPES) {
         const mealBudget = (dailyBase * budgetSettings.mealShare[mealType]) / 100
-        const results = await searchBudgetRecipes({
-          maxPricePerServingEuro: mealBudget > 0 ? mealBudget : undefined,
-          dishType: DISH_TYPE_BY_MEAL[mealType],
-          number: plan.mealPrepMode ? 3 : 7,
-        })
-        if (getLastFetchSource() === 'pool-fallback') setUsingFallback(true)
+        const wanted = plan.mealPrepMode ? 3 : 7
+        let results: BudgetRecipeSuggestion[]
+        try {
+          results = await searchBudgetRecipes({
+            maxPricePerServingEuro: mealBudget > 0 ? mealBudget : undefined,
+            dishType: DISH_TYPE_BY_MEAL[mealType],
+            number: wanted,
+          })
+          if (getLastFetchSource() === 'pool-fallback') setUsingFallback(true)
+        } catch (err) {
+          if (!(err instanceof SpoonacularQuotaError)) throw err
+          // Kontingent (und Zwischenspeicher) aufgebraucht: für diese
+          // Mahlzeit stattdessen über die kostenlose zweite Quelle
+          // (TheMealDB) auffüllen, statt den ganzen Plan scheitern zu
+          // lassen. Ohne Preis-/Zeitangabe, siehe toFallbackSuggestions.
+          setUsingFallback(true)
+          const fallbackRecipes = await getRandomRecipesForMeal(mealType, wanted)
+          results = toFallbackSuggestions(fallbackRecipes)
+        }
         nextCandidates[mealType] = results
 
         const pairs = await Promise.all(
@@ -174,7 +200,7 @@ export default function WochenplanPage() {
     setError(null)
     setViewServings(1)
     try {
-      const raw = await getRecipeInformation(slot.recipeId)
+      const raw = await getFullRecipeDetails(slot.recipeId)
       setViewing(await translateRecipe(raw))
     } catch {
       setError('Rezeptdetails konnten nicht geladen werden.')
@@ -195,7 +221,7 @@ export default function WochenplanPage() {
         ),
       )
       const recipes = await Promise.all(
-        distinctIds.map((id) => getRecipeInformation(id)),
+        distinctIds.map((id) => getFullRecipeDetails(id)),
       )
       const allInputs = recipes.flatMap((r) => recipeToShoppingListInputs(r, 1))
       await shoppingList.addMany(allInputs)
@@ -236,14 +262,14 @@ export default function WochenplanPage() {
       />
 
       {tab === 'plan' && !hasSpoonacularKey() && (
-        <Card className="text-sm text-stone-300">
+        <Card className="text-sm text-stone-700 dark:text-stone-300">
           Der Wochenplan braucht einen Spoonacular-API-Key. Kostenlos
           erstellen auf{' '}
           <a
             href="https://spoonacular.com/food-api"
             target="_blank"
             rel="noreferrer"
-            className="text-emerald-400 underline"
+            className="text-emerald-700 dark:text-emerald-400 underline"
           >
             spoonacular.com/food-api
           </a>
@@ -262,12 +288,12 @@ export default function WochenplanPage() {
                   ? 'Plan neu erstellen'
                   : 'Plan erstellen'}
             </Button>
-            <label className="flex items-center gap-2 text-sm text-stone-300">
+            <label className="flex items-center gap-2 text-sm text-stone-700 dark:text-stone-300">
               <input
                 type="checkbox"
                 checked={plan.mealPrepMode}
                 onChange={(e) => updatePlan({ mealPrepMode: e.target.checked })}
-                className="size-4 rounded border-stone-700 text-emerald-600 focus:ring-emerald-500"
+                className="size-4 rounded border-stone-200 dark:border-stone-700 text-emerald-600 focus:ring-emerald-500"
               />
               Meal-Prep (wenige Gerichte wiederholen)
             </label>
@@ -285,9 +311,12 @@ export default function WochenplanPage() {
             </Hint>
           )}
           {usingFallback && (
-            <Hint>📦 Kontingent aufgebraucht – zeige zwischengespeicherte Rezepte.</Hint>
+            <Hint>
+              📦 Spoonacular-Kontingent aufgebraucht – einzelne Vorschläge
+              stammen aus einer zweiten Rezeptquelle ohne Preis-/Zeitangabe.
+            </Hint>
           )}
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
           {filledSlotCount > 0 && (
             <div className="flex flex-wrap items-center gap-3">
@@ -304,7 +333,7 @@ export default function WochenplanPage() {
           )}
           {listStatus && <Hint>{listStatus}</Hint>}
 
-          {viewLoading && <p className="text-sm text-stone-400">Lade Rezeptdetails …</p>}
+          {viewLoading && <p className="text-sm text-stone-500 dark:text-stone-400">Lade Rezeptdetails …</p>}
           {viewing && !viewLoading && (
             <RecipeDetail
               recipe={viewing}
@@ -329,19 +358,19 @@ export default function WochenplanPage() {
             <div className="space-y-3">
               {PLAN_DAYS.map((dayLabel, day) => (
                 <Card key={dayLabel} className="space-y-2">
-                  <h3 className="text-sm font-semibold text-stone-100">{dayLabel}</h3>
+                  <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100">{dayLabel}</h3>
                   <div className="grid gap-2 sm:grid-cols-3">
                     {MEAL_TYPES.map((mealType) => {
                       const slot = plan.slots[slotKey(day, mealType)]
                       return (
-                        <div key={mealType} className="rounded-xl bg-stone-800 p-2 text-xs">
-                          <p className="mb-1 font-medium text-stone-400">
+                        <div key={mealType} className="rounded-xl bg-stone-100 dark:bg-stone-800 p-2 text-xs">
+                          <p className="mb-1 font-medium text-stone-500 dark:text-stone-400">
                             {MEAL_TYPE_LABELS[mealType]}
                           </p>
                           {slot ? (
                             <div className="space-y-1">
-                              <p className="text-sm text-stone-100">{slot.recipeName}</p>
-                              <p className="text-stone-400">
+                              <p className="text-sm text-stone-900 dark:text-stone-100">{slot.recipeName}</p>
+                              <p className="text-stone-500 dark:text-stone-400">
                                 {[
                                   slot.prepTimeMinutes ? `${slot.prepTimeMinutes} Min.` : null,
                                   slot.estimatedCostEuro !== undefined
@@ -354,20 +383,20 @@ export default function WochenplanPage() {
                               <div className="flex gap-2 pt-1">
                                 <button
                                   onClick={() => handleView(slot)}
-                                  className="text-emerald-400 underline"
+                                  className="text-emerald-700 dark:text-emerald-400 underline"
                                 >
                                   Ansehen
                                 </button>
                                 <button
                                   onClick={() => handleSwap(day, mealType)}
-                                  className="text-stone-400 underline"
+                                  className="text-stone-500 dark:text-stone-400 underline"
                                 >
                                   Tauschen
                                 </button>
                               </div>
                             </div>
                           ) : (
-                            <p className="text-stone-500">–</p>
+                            <p className="text-stone-400 dark:text-stone-500">–</p>
                           )}
                         </div>
                       )

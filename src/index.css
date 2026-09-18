@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* Klassenbasiertes Dark Mode statt reiner Systemeinstellung: die App legt
+   "dark" auf <html> an/ab (siehe lib/theme.ts + useAppSettings "theme"),
+   damit Nutzer in den Einstellungen selbst zwischen Hell/Dunkel wechseln
+   können. "dark:"-Utilities greifen dann, wenn ein Vorfahre die Klasse
+   "dark" trägt. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Modernes Design-System: eigene Schrift, weichere Flächenfarbe und ein
    paar wiederverwendbare Tokens (Schatten/Radius), auf die die UI-
    Bausteine in components/ui.tsx zurückgreifen. Die Funktionsfarbe bleibt
@@ -9,22 +16,44 @@
 */
 @theme {
   --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
-  /* Echtes Dark Mode: auf dunklem Grund bringt ein heller Schlagschatten
-     kaum noch etwas – Karten grenzen sich stattdessen vor allem über ihren
-     eigenen Rand (border-stone-700) ab. Der Schatten bleibt dezent
-     vorhanden für ein bisschen Tiefe/Hover-Feedback, jetzt schwarzbasiert. */
+  /* Heller Standard-Schlagschatten (warmer Braunton statt reinem Schwarz,
+     passend zur cremefarbenen Fläche). Wird im Dark Mode weiter unten
+     durch einen schwarzbasierten, kräftigeren Schatten ersetzt. */
+  --shadow-card: 0 1px 2px 0 rgb(87 65 47 / 0.06), 0 2px 6px 0 rgb(87 65 47 / 0.08);
+  --shadow-card-hover: 0 10px 24px -4px rgb(87 65 47 / 0.14), 0 4px 10px -2px rgb(87 65 47 / 0.1);
+}
+
+/* Echtes Dark Mode: auf dunklem Grund bringt ein heller Schlagschatten
+   kaum noch etwas – Karten grenzen sich stattdessen vor allem über ihren
+   eigenen Rand (border-stone-700) ab. Der Schatten bleibt dezent vorhanden
+   für ein bisschen Tiefe/Hover-Feedback, jetzt schwarzbasiert. */
+:root.dark {
   --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.3), 0 2px 6px 0 rgb(0 0 0 / 0.25);
   --shadow-card-hover: 0 10px 24px -4px rgb(0 0 0 / 0.45), 0 4px 10px -2px rgb(0 0 0 / 0.3);
 }
 
-/* Durchgehendes, echtes Dark Mode statt der vorherigen Mischung (nur
-   dunkle Navbar auf hellem Grund) – ein einheitlicher dunkler Anthrazit-Ton
-   für die ganze Seite, vor dem sich die (jetzt ebenfalls dunklen) Karten
-   über ihren Rand statt über einen hellen Schlagschatten abheben. */
+/* color-scheme steuert auch, wie der Browser NATIVE Formularelemente
+   zeichnet (u. a. das Popup von <datalist>, Checkboxen, Scrollbars). Muss
+   am :root sitzen, nicht nur an body – sonst rendert z. B. Chrome unter
+   Windows das datalist-Popup weiterhin mit hellem UA-Stil (dunkler Text),
+   während unser eigener Hintergrund schon dunkel ist -> dunkler Text auf
+   dunklem Grund ("Vorschläge unsichtbar"). */
+:root {
+  color-scheme: light;
+}
+:root.dark {
+  color-scheme: dark;
+}
+
+/* Warme, helle Fläche im Hell-Modus (Creme/Khaki statt reinem Weiß) –
+   wechselt im Dark Mode auf den dunklen Anthrazit-Verlauf. */
 body {
-  background-color: #1c1917;
-  background-image: linear-gradient(180deg, #24211d 0%, #1c1917 420px, #171512 100%);
+  background-color: #fbfaf7;
+  background-image: linear-gradient(180deg, #fefdfb 0%, #f7f5f0 420px, #f1efe7 100%);
   background-attachment: fixed;
   min-height: 100vh;
-  color-scheme: dark;
+}
+:root.dark body {
+  background-color: #1c1917;
+  background-image: linear-gradient(180deg, #24211d 0%, #1c1917 420px, #171512 100%);
 }

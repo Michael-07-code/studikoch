@@ -37,8 +37,8 @@ function ProductRow({
   return (
     <li className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
       <div className="min-w-0 flex-1">
-        <p className="truncate text-stone-100">{product.name}</p>
-        <p className="text-xs text-stone-400">
+        <p className="truncate text-stone-900 dark:text-stone-100">{product.name}</p>
+        <p className="text-xs text-stone-500 dark:text-stone-400">
           {storeLabel(product.store)}
           {product.quantity && product.unit
             ? ` · ${product.quantity} ${product.unit}`
@@ -46,19 +46,19 @@ function ProductRow({
           {product.bio ? ' · Bio' : ''}
         </p>
       </div>
-      <span className="shrink-0 font-medium text-stone-100">
+      <span className="shrink-0 font-medium text-stone-900 dark:text-stone-100">
         {product.price.toFixed(2)} €
       </span>
       {ownSupermarket ? (
         <button
           onClick={() => onAdd(product, ownSupermarket)}
-          className="shrink-0 rounded-xl border-2 border-emerald-700 px-2 py-1 text-xs font-medium text-emerald-300 hover:bg-emerald-950/40"
+          className="shrink-0 rounded-xl border-2 border-emerald-300 dark:border-emerald-700 px-2 py-1 text-xs font-medium text-emerald-800 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
         >
           Übernehmen
         </button>
       ) : (
         <span
-          className="shrink-0 text-xs text-stone-500"
+          className="shrink-0 text-xs text-stone-400 dark:text-stone-500"
           title={`Lege "${storeLabel(product.store)}" unter Einkaufsliste → Supermärkte an, um den Preis zu übernehmen.`}
         >
           –
@@ -143,27 +143,27 @@ export default function PricesPanel({
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-stone-400">
+      <p className="text-sm text-stone-500 dark:text-stone-400">
         Tagesaktuelle Preise von Spar, Billa, Hofer, Lidl, dm & MPreis – via{' '}
         <a
           href="https://heissepreise.github.io/"
           target="_blank"
           rel="noreferrer"
-          className="text-emerald-400 underline"
+          className="text-emerald-700 dark:text-emerald-400 underline"
         >
           Heisse Preise
         </a>
         .
       </p>
 
-      {loading && <p className="text-sm text-stone-400">Lade Preisdaten …</p>}
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {loading && <p className="text-sm text-stone-500 dark:text-stone-400">Lade Preisdaten …</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
       {!loading && products && (
         <>
           {uniqueItemNames.length > 0 && (
             <div className="space-y-3">
-              <h2 className="text-lg font-semibold text-stone-100">
+              <h2 className="text-lg font-semibold text-stone-900 dark:text-stone-100">
                 Preise für deine Einkaufsliste
               </h2>
               <div className="space-y-3">
@@ -173,7 +173,7 @@ export default function PricesPanel({
                   const listItems = items.filter((i) => i.name.trim() === name)
                   return (
                     <Card key={name} className="p-3">
-                      <p className="mb-2 text-sm font-medium text-stone-100">
+                      <p className="mb-2 text-sm font-medium text-stone-900 dark:text-stone-100">
                         {name}
                       </p>
                       <ul className="space-y-1">
@@ -187,10 +187,10 @@ export default function PricesPanel({
                               key={`${m.store}-${m.name}`}
                               className="flex items-center justify-between gap-3 text-sm"
                             >
-                              <span className="min-w-0 flex-1 truncate text-stone-300">
+                              <span className="min-w-0 flex-1 truncate text-stone-700 dark:text-stone-300">
                                 {storeLabel(m.store)} · {m.name}
                               </span>
-                              <span className="shrink-0 font-medium text-stone-100">
+                              <span className="shrink-0 font-medium text-stone-900 dark:text-stone-100">
                                 {m.price.toFixed(2)} €
                               </span>
                               {ownSupermarket && listItems.length > 0 ? (
@@ -202,7 +202,7 @@ export default function PricesPanel({
                                       m.price,
                                     )
                                   }
-                                  className="shrink-0 rounded-xl border-2 border-emerald-700 px-2 py-1 text-xs font-medium text-emerald-300 hover:bg-emerald-950/40"
+                                  className="shrink-0 rounded-xl border-2 border-emerald-300 dark:border-emerald-700 px-2 py-1 text-xs font-medium text-emerald-800 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
                                 >
                                   Preis übernehmen
                                 </button>
@@ -221,7 +221,7 @@ export default function PricesPanel({
           )}
 
           <div className="space-y-3">
-            <h2 className="text-lg font-semibold text-stone-100">
+            <h2 className="text-lg font-semibold text-stone-900 dark:text-stone-100">
               Artikel suchen
             </h2>
             <input
@@ -229,16 +229,16 @@ export default function PricesPanel({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="z. B. Milch, Nudeln, Toastbrot"
-              className="w-full max-w-sm rounded-xl border border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-full max-w-sm rounded-xl border border-stone-200 dark:border-stone-700 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             />
             <Hint>Penny, Wochenmärkte & Co. sind nicht enthalten.</Hint>
             {query.trim() && searchResults.length === 0 && (
-              <p className="text-sm text-stone-400">
+              <p className="text-sm text-stone-500 dark:text-stone-400">
                 Keine Treffer für „{query}".
               </p>
             )}
             {searchResults.length > 0 && (
-              <ul className="divide-y divide-stone-700 rounded-xl border border-stone-700 bg-stone-900 shadow-card">
+              <ul className="divide-y divide-stone-200 dark:divide-stone-700 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 shadow-card">
                 {searchResults.map((p) => (
                   <ProductRow
                     key={`${p.store}-${p.name}`}

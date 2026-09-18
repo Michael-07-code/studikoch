@@ -47,8 +47,8 @@ export default function SavedRecipesBrowser({
           onClick={() => setActiveList('all')}
           className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
             activeList === 'all'
-              ? 'bg-emerald-900/40 text-emerald-300'
-              : 'bg-stone-800 text-stone-300 hover:bg-stone-700'
+              ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300'
+              : 'bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700'
           }`}
         >
           Alle ({saved.length})
@@ -59,8 +59,8 @@ export default function SavedRecipesBrowser({
             onClick={() => setActiveList(l.id)}
             className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
               activeList === l.id
-                ? 'bg-emerald-900/40 text-emerald-300'
-                : 'bg-stone-800 text-stone-300 hover:bg-stone-700'
+                ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300'
+                : 'bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700'
             }`}
           >
             {l.name} ({saved.filter((s) => s.listIds.includes(l.id)).length})
@@ -68,7 +68,7 @@ export default function SavedRecipesBrowser({
         ))}
         <button
           onClick={() => setShowListManager((v) => !v)}
-          className="text-xs text-emerald-400 underline"
+          className="text-xs text-emerald-700 dark:text-emerald-400 underline"
         >
           {showListManager ? 'Listen ausblenden' : 'Listen verwalten'}
         </button>
@@ -95,7 +95,7 @@ export default function SavedRecipesBrowser({
             <button
               key={s.recipe.id}
               onClick={() => onSelect(s.recipe.id)}
-              className="flex flex-col overflow-hidden rounded-2xl border border-stone-700/70 bg-stone-900 text-left shadow-card transition-shadow hover:shadow-card-hover"
+              className="flex flex-col overflow-hidden rounded-2xl border border-stone-200/70 dark:border-stone-700/70 bg-white dark:bg-stone-900 text-left shadow-card transition-shadow hover:shadow-card-hover"
             >
               {s.recipe.thumbnail && (
                 <img
@@ -106,10 +106,10 @@ export default function SavedRecipesBrowser({
                 />
               )}
               <div className="p-3">
-                <p className="text-sm font-medium text-stone-100">
+                <p className="text-sm font-medium text-stone-900 dark:text-stone-100">
                   {s.recipe.name}
                 </p>
-                <p className="mt-1 text-xs text-stone-400">
+                <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
                   {[
                     MEAL_TYPE_LABELS[s.mealType],
                     s.prepTimeMinutes ? `${s.prepTimeMinutes} Min.` : null,

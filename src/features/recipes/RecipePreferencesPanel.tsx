@@ -35,7 +35,7 @@ function NumberOrNullInput({
         onChange(Number.isNaN(parsed) ? null : parsed)
       }}
       placeholder={placeholder}
-      className="mt-1 w-28 rounded-xl border border-stone-700 px-2 py-1.5 text-sm"
+      className="mt-1 w-28 rounded-xl border border-stone-200 dark:border-stone-700 px-2 py-1.5 text-sm"
     />
   )
 }
@@ -61,12 +61,12 @@ export default function RecipePreferencesPanel({
     <div className="relative">
       <div className="flex flex-wrap items-center gap-3">
         {showInventoryToggleInline && (
-          <label className="flex items-center gap-2 text-sm text-stone-300">
+          <label className="flex items-center gap-2 text-sm text-stone-700 dark:text-stone-300">
             <input
               type="checkbox"
               checked={preferences.respectInventory}
               onChange={(e) => patch({ respectInventory: e.target.checked })}
-              className="size-4 rounded border-stone-700 text-emerald-600 focus:ring-emerald-500"
+              className="size-4 rounded border-stone-200 dark:border-stone-700 text-emerald-600 focus:ring-emerald-500"
             />
             Nur mit meinem Inventar kochbar
           </label>
@@ -75,7 +75,7 @@ export default function RecipePreferencesPanel({
           type="button"
           variant="ghost"
           size="sm"
-          className="border border-stone-700"
+          className="border border-stone-200 dark:border-stone-700"
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
         >
@@ -84,14 +84,14 @@ export default function RecipePreferencesPanel({
       </div>
 
       {open && (
-        <div className="absolute right-0 z-10 mt-2 w-[min(18rem,85vw)] space-y-3 rounded-2xl border border-stone-700 bg-stone-900 p-4 text-sm shadow-card-hover">
+        <div className="absolute right-0 z-10 mt-2 w-[min(18rem,85vw)] space-y-3 rounded-2xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 p-4 text-sm shadow-card-hover">
           <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-stone-100">
+            <h3 className="font-semibold text-stone-900 dark:text-stone-100">
               Rezept-Einstellungen
             </h3>
             <button
               onClick={() => setOpen(false)}
-              className="text-stone-500 hover:text-stone-300"
+              className="text-stone-400 dark:text-stone-500 hover:text-stone-700 dark:hover:text-stone-300"
               aria-label="Schließen"
             >
               ✕
@@ -124,7 +124,7 @@ export default function RecipePreferencesPanel({
               onChange={(e) =>
                 patch({ everydayIngredientsOnly: e.target.checked })
               }
-              className="size-4 rounded border-stone-700 text-emerald-600 focus:ring-emerald-500"
+              className="size-4 rounded border-stone-200 dark:border-stone-700 text-emerald-600 focus:ring-emerald-500"
             />
             Nur alltägliche Zutaten (keine Exoten)
           </label>
@@ -134,7 +134,7 @@ export default function RecipePreferencesPanel({
               type="checkbox"
               checked={preferences.fillingOnly}
               onChange={(e) => patch({ fillingOnly: e.target.checked })}
-              className="size-4 rounded border-stone-700 text-emerald-600 focus:ring-emerald-500"
+              className="size-4 rounded border-stone-200 dark:border-stone-700 text-emerald-600 focus:ring-emerald-500"
             />
             Nur sättigende Gerichte
           </label>
@@ -147,7 +147,7 @@ export default function RecipePreferencesPanel({
                 onChange={(e) =>
                   patch({ respectInventory: e.target.checked })
                 }
-                className="size-4 rounded border-stone-700 text-emerald-600 focus:ring-emerald-500"
+                className="size-4 rounded border-stone-200 dark:border-stone-700 text-emerald-600 focus:ring-emerald-500"
               />
               Nur mit meinem Inventar kochbar
             </label>

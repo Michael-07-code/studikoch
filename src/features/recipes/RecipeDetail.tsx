@@ -87,16 +87,16 @@ export default function RecipeDetail({
     <Card className="space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold tracking-tight text-stone-100">
+          <h2 className="text-xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
             {recipe.name}
           </h2>
-          <p className="text-sm text-stone-400">
+          <p className="text-sm text-stone-500 dark:text-stone-400">
             {[recipe.category, recipe.area].filter(Boolean).join(' · ')}
           </p>
         </div>
         <button
           onClick={onClose}
-          className="shrink-0 rounded-xl px-2 py-1 text-sm text-stone-400 hover:bg-stone-800"
+          className="shrink-0 rounded-xl px-2 py-1 text-sm text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800"
         >
           Schließen
         </button>
@@ -120,7 +120,7 @@ export default function RecipeDetail({
             </Button>
           )}
           {justAdded && (
-            <span className="flex items-center gap-1 text-sm font-medium text-emerald-400">
+            <span className="flex items-center gap-1 text-sm font-medium text-emerald-700 dark:text-emerald-400">
               ✓ Hinzugefügt
             </span>
           )}
@@ -145,7 +145,7 @@ export default function RecipeDetail({
       {(recipe.prepTimeMinutes !== undefined ||
         recipe.estimatedCostEuro !== undefined ||
         (recipe.requiredEquipment && recipe.requiredEquipment.length > 0)) && (
-        <div className="space-y-1 rounded-xl bg-stone-800 p-3 text-sm text-stone-300">
+        <div className="space-y-1 rounded-xl bg-stone-100 dark:bg-stone-800 p-3 text-sm text-stone-700 dark:text-stone-300">
           {(recipe.prepTimeMinutes !== undefined ||
             recipe.estimatedCostEuro !== undefined) && (
             <p>
@@ -180,7 +180,7 @@ export default function RecipeDetail({
             </div>
           )}
           {missing.length > 0 && (
-            <p className="text-amber-400">
+            <p className="text-amber-700 dark:text-amber-400">
               Fehlt laut Inventar: {missing.map((m) => m.label).join(', ')}
             </p>
           )}
@@ -188,7 +188,7 @@ export default function RecipeDetail({
       )}
 
       <div className="flex items-center gap-2">
-        <label htmlFor="servings" className="text-sm font-medium text-stone-300">
+        <label htmlFor="servings" className="text-sm font-medium text-stone-700 dark:text-stone-300">
           Personenanzahl
         </label>
         <input
@@ -201,18 +201,18 @@ export default function RecipeDetail({
             const next = parseInt(e.target.value, 10)
             onServingsChange(Number.isNaN(next) || next < 1 ? 1 : next)
           }}
-          className="w-20 rounded-xl border border-stone-700 px-2 py-1 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+          className="w-20 rounded-xl border border-stone-200 dark:border-stone-700 px-2 py-1 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
         />
       </div>
       <Hint>Mengen hochgerechnet ab 4 Portionen, Text maschinell übersetzt.</Hint>
 
       <div>
-        <h3 className="mb-2 text-sm font-semibold text-stone-100">Zutaten</h3>
-        <ul className="space-y-1 text-sm text-stone-300">
+        <h3 className="mb-2 text-sm font-semibold text-stone-900 dark:text-stone-100">Zutaten</h3>
+        <ul className="space-y-1 text-sm text-stone-700 dark:text-stone-300">
           {recipe.ingredients.map((ing) => (
             <li key={ing.name} className="flex justify-between gap-4">
               <span>{ing.name}</span>
-              <span className="text-stone-400">
+              <span className="text-stone-500 dark:text-stone-400">
                 {scaleMeasure(ing.measure, servings, translateUnit)}
               </span>
             </li>
@@ -225,10 +225,10 @@ export default function RecipeDetail({
       )}
 
       <div>
-        <h3 className="mb-2 text-sm font-semibold text-stone-100">
+        <h3 className="mb-2 text-sm font-semibold text-stone-900 dark:text-stone-100">
           Zubereitung
         </h3>
-        <ol className="list-decimal space-y-2 pl-5 text-sm text-stone-300">
+        <ol className="list-decimal space-y-2 pl-5 text-sm text-stone-700 dark:text-stone-300">
           {recipe.instructions.map((step, i) => (
             <li key={i}>{step}</li>
           ))}
@@ -242,7 +242,7 @@ export default function RecipeDetail({
           href={recipe.sourceUrl}
           target="_blank"
           rel="noreferrer"
-          className="inline-block text-sm text-emerald-400 underline"
+          className="inline-block text-sm text-emerald-700 dark:text-emerald-400 underline"
         >
           Originalquelle
         </a>
