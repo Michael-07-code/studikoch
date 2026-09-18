@@ -23,8 +23,12 @@ import type { Recipe } from '../recipes/types'
 import {
   isFilledSlot,
   PLAN_DAYS,
+  PLAN_SLOT_LABELS,
+  PLAN_SLOT_TO_BUDGET_MEAL,
+  PLAN_SLOT_TYPES,
   slotKey,
   type BudgetMealType,
+  type PlanSlotType,
   type WeeklyPlanSlot,
 } from './types'
 import {
@@ -38,16 +42,22 @@ import {
 
 type Tab = 'plan' | 'budget'
 
-const MEAL_TYPES: BudgetMealType[] = ['fruehstueck', 'hauptmahlzeit']
-const MEAL_TYPE_LABELS: Record<BudgetMealType, string> = {
-  fruehstueck: 'Frühstück',
-  hauptmahlzeit: 'Mittag-/Abendessen',
-}
+const BUDGET_MEAL_TYPES: BudgetMealType[] = ['fruehstueck', 'hauptmahlzeit']
+
 // Spoonacular-Gerichtart je Mahlzeit, für passendere Vorschläge als eine
 // generische Suche (siehe dishType in spoonacular.ts).
 const DISH_TYPE_BY_MEAL: Record<BudgetMealType, string> = {
   fruehstueck: 'breakfast',
   hauptmahlzeit: 'main course',
+}
+
+// Welche Plan-Slots (siehe types.ts) mit welcher Budget-Kategorie befüllt
+// werden – Frühstück bleibt 1:1, Mittag- und Abendessen teilen sich einen
+// gemeinsamen Suchtopf ("Hauptmahlzeit"), bekommen aber trotzdem je einen
+// eigenen, unabhängigen Vorschlag (siehe handleGenerate).
+const SLOTS_BY_BUDGET_MEAL: Record<BudgetMealType, PlanSlotType[]> = {
+  fruehstueck: ['fruehstueck'],
+  hauptmahlzeit: ['mittagessen', 'abendessen'],
 }
 
 // TheMealDB-Rezepte (siehe unten, Ersatzquelle bei aufgebrauchtem
@@ -75,11 +85,14 @@ function toSlot(
   }
 }
 
-// Wochenplan: pro Tag und Mahlzeit ein Rezeptvorschlag, passend zum
-// Tages-/Wochenbudget (Reiter "Budget") und optional als "Meal-Prep"
-// (wenige Gerichte über die Woche wiederholen statt für jeden Tag neu zu
-// suchen). Einzelne Tage/Mahlzeiten sind über "Tauschen" austauschbar, ohne
-// den ganzen Plan neu zu erstellen.
+// Wochenplan: pro Tag drei Mahlzeiten (Frühstück, Mittag-, Abendessen),
+// passend zum Tages-/Wochenbudget (Reiter "Budget") und optional als
+// "Meal-Prep" (wenige Gerichte über die Woche wiederholen statt für jeden
+// Tag neu zu suchen). Mittag- und Abendessen teilen sich zwar einen
+// gemeinsamen Budget-/Such-Topf ("Hauptmahlzeit", siehe budget/types.ts),
+// bekommen im Plan aber trotzdem je einen eigenen Rezeptvorschlag – man isst
+// schließlich real dreimal am Tag. Einzelne Tage/Mahlzeiten sind über
+// "Tauschen" austauschbar, ohne den ganzen Plan neu zu erstellen.
 export default function WochenplanPage() {
   const { plan, setSlot, setManySlots, toggleSkip, clearPlan, updatePlan } =
     useWeeklyPlan()
@@ -127,20 +140,33 @@ export default function WochenplanPage() {
       const nextNames: Record<string, string> = {}
       const newSlots: Record<string, WeeklyPlanSlot | null> = {}
 
-      for (const mealType of MEAL_TYPES) {
-        const mealBudget = (dailyBase * budgetSettings.mealShare[mealType]) / 100
-        const wanted = plan.mealPrepMode ? 3 : 7
+      for (const budgetMealType of BUDGET_MEAL_TYPES) {
+        const planSlots = SLOTS_BY_BUDGET_MEAL[budgetMealType]
+        // Pro Tag werden so viele Plan-Slots aus diesem Topf befüllt wie
+        // Mahlzeiten darauf entfallen (1 für Frühstück, 2 für Mittag- +
+        // Abendessen zusammen) – das Budget pro Gericht wird entsprechend
+        // aufgeteilt, sonst wäre ein einzelnes Hauptmahlzeit-Gericht auf
+        // einmal für den kompletten Mittag+Abend-Anteil budgetiert.
+        const mealBudget =
+          (dailyBase * budgetSettings.mealShare[budgetMealType]) /
+          100 /
+          planSlots.length
+        const wanted = plan.mealPrepMode
+          ? planSlots.length + 1
+          : 7 * planSlots.length
         let results: BudgetRecipeSuggestion[]
         try {
           results = await searchBudgetRecipes({
             maxPricePerServingEuro: mealBudget > 0 ? mealBudget : undefined,
-            dishType: DISH_TYPE_BY_MEAL[mealType],
+            dishType: DISH_TYPE_BY_MEAL[budgetMealType],
             number: wanted,
             // Dieselben "einfach/studententauglich"-Filter wie im
             // Rezepte-Tinder und der Budget-Suche (vorher fehlten sie hier
             // komplett). "sort: random" sorgt außerdem dafür, dass "Plan
             // neu erstellen" tatsächlich neue statt der immer gleichen,
-            // 24h zwischengespeicherten Vorschläge liefert.
+            // 24h zwischengespeicherten Vorschläge liefert. Keine Nährwerte
+            // anfordern (includeNutrition weggelassen) – die werden hier nur
+            // nach Klick auf "Ansehen" gebraucht (spart Tageskontingent).
             maxReadyTimeMinutes: preferences.maxTimeMinutes ?? undefined,
             excludeExoticIngredients: preferences.everydayIngredientsOnly,
             minCalories: preferences.fillingOnly ? 500 : undefined,
@@ -154,10 +180,13 @@ export default function WochenplanPage() {
           // (TheMealDB) auffüllen, statt den ganzen Plan scheitern zu
           // lassen. Ohne Preis-/Zeitangabe, siehe toFallbackSuggestions.
           setUsingFallback(true)
-          const fallbackRecipes = await getRandomRecipesForMeal(mealType, wanted)
+          const fallbackRecipes = await getRandomRecipesForMeal(
+            budgetMealType,
+            wanted,
+          )
           results = toFallbackSuggestions(fallbackRecipes)
         }
-        nextCandidates[mealType] = results
+        nextCandidates[budgetMealType] = results
 
         const pairs = await Promise.all(
           results.map(
@@ -168,13 +197,21 @@ export default function WochenplanPage() {
 
         if (results.length === 0) continue
         const distinctCount = plan.mealPrepMode
-          ? Math.min(2, results.length)
+          ? Math.min(planSlots.length + 1, results.length)
           : results.length
+        // Ein fortlaufender Zähler über Tag×Slot statt getrennt pro Slot-Typ
+        // zu indizieren, damit Mittag- und Abendessen (beide aus demselben
+        // "results"-Topf) nach Möglichkeit unterschiedliche Gerichte
+        // bekommen, statt an jedem Tag identisch zu sein.
+        let cursor = 0
         for (let day = 0; day < 7; day++) {
-          const candidate = results[day % Math.max(distinctCount, 1)]
-          newSlots[slotKey(day, mealType)] = candidate
-            ? toSlot(candidate, nextNames[candidate.recipe.id] ?? candidate.recipe.name)
-            : null
+          for (const slotType of planSlots) {
+            const candidate = results[cursor % Math.max(distinctCount, 1)]
+            cursor++
+            newSlots[slotKey(day, slotType)] = candidate
+              ? toSlot(candidate, nextNames[candidate.recipe.id] ?? candidate.recipe.name)
+              : null
+          }
         }
       }
 
@@ -194,26 +231,46 @@ export default function WochenplanPage() {
     }
   }
 
-  function handleSwap(day: number, mealType: BudgetMealType) {
-    const candidates = candidatesByMeal[mealType]
+  function handleSwap(day: number, slotType: PlanSlotType) {
+    const budgetMealType = PLAN_SLOT_TO_BUDGET_MEAL[slotType]
+    const candidates = candidatesByMeal[budgetMealType]
     if (candidates.length === 0) return
-    const current = plan.slots[slotKey(day, mealType)]
+    const current = plan.slots[slotKey(day, slotType)]
     const currentIdx = candidates.findIndex(
       (c) => isFilledSlot(current) && c.recipe.id === current.recipeId,
     )
     const next = candidates[(currentIdx + 1) % candidates.length]
     setSlot(
-      slotKey(day, mealType),
+      slotKey(day, slotType),
       toSlot(next, displayNames[next.recipe.id] ?? next.recipe.name),
     )
   }
 
-  async function handleView(slot: WeeklyPlanSlot) {
+  async function handleView(slot: WeeklyPlanSlot & { recipeId: string }) {
     setViewLoading(true)
     setError(null)
     setViewServings(1)
     try {
-      const raw = await getFullRecipeDetails(slot.recipeId)
+      let raw: Recipe
+      try {
+        raw = await getFullRecipeDetails(slot.recipeId)
+      } catch {
+        // Nachladen fehlgeschlagen (z. B. Spoonacular-Kontingent gerade
+        // aufgebraucht) – der letzte "Plan erstellen"/"Tauschen"-Aufruf hat
+        // bereits ein vollständiges Rezeptobjekt für diesen Vorschlag
+        // geladen (siehe candidatesByMeal); das notfalls stattdessen
+        // anzeigen, statt "Rezeptdetails konnten nicht geladen werden" zu
+        // melden, obwohl die Daten eigentlich schon da wären.
+        const allCandidates = [
+          ...candidatesByMeal.fruehstueck,
+          ...candidatesByMeal.hauptmahlzeit,
+        ]
+        const cached = allCandidates.find(
+          (c) => c.recipe.id === slot.recipeId,
+        )?.recipe
+        if (!cached) throw new Error('Rezept nicht gefunden.')
+        raw = cached
+      }
       setViewing(await translateRecipe(raw))
     } catch {
       setError('Rezeptdetails konnten nicht geladen werden.')
@@ -250,8 +307,8 @@ export default function WochenplanPage() {
 
   const filledSlotCount = Object.values(plan.slots).filter(Boolean).length
   // Grobe Näherung: estimatedCostEuro gilt für 4 Portionen, ein Slot steht
-  // für eine Mahlzeit (1 Portion). "skip"-Slots ("ich esse hier nichts")
-  // fließen bewusst nicht in die Kostensumme ein.
+  // für eine Mahlzeit (1 Portion). Übersprungene Mahlzeiten ("ich esse hier
+  // nichts") fließen bewusst nicht in die Kostensumme ein.
   const totalCost = Object.values(plan.slots).reduce(
     (sum, s) => (isFilledSlot(s) ? sum + (s.estimatedCostEuro ?? 0) / 4 : sum),
     0,
@@ -376,15 +433,14 @@ export default function WochenplanPage() {
               {PLAN_DAYS.map((dayLabel, day) => (
                 <Card key={dayLabel} className="space-y-2">
                   <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100">{dayLabel}</h3>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {MEAL_TYPES.map((mealType) => {
-                      const key = slotKey(day, mealType)
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    {PLAN_SLOT_TYPES.map((slotType) => {
+                      const key = slotKey(day, slotType)
                       const slot = plan.slots[key]
-                      const skipped = slot === 'skip'
                       return (
-                        <div key={mealType} className="rounded-xl bg-stone-100 dark:bg-stone-800 p-2 text-xs">
+                        <div key={slotType} className="rounded-xl bg-stone-100 dark:bg-stone-800 p-2 text-xs">
                           <p className="mb-1 font-medium text-stone-500 dark:text-stone-400">
-                            {MEAL_TYPE_LABELS[mealType]}
+                            {PLAN_SLOT_LABELS[slotType]}
                           </p>
                           {isFilledSlot(slot) ? (
                             <div className="space-y-1">
@@ -407,7 +463,7 @@ export default function WochenplanPage() {
                                   Ansehen
                                 </button>
                                 <button
-                                  onClick={() => handleSwap(day, mealType)}
+                                  onClick={() => handleSwap(day, slotType)}
                                   className="text-stone-500 dark:text-stone-400 underline"
                                 >
                                   Tauschen
@@ -420,7 +476,7 @@ export default function WochenplanPage() {
                                 </button>
                               </div>
                             </div>
-                          ) : skipped ? (
+                          ) : slot?.skipped ? (
                             <div className="space-y-1">
                               <p className="italic text-stone-400 dark:text-stone-500">
                                 Nichts geplant

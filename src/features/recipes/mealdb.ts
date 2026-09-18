@@ -1,4 +1,5 @@
 import type { Recipe, RecipeIngredient, RecipeSummary } from './types'
+import { isStudentFriendly } from './simpleFilter'
 
 // TheMealDB: kostenlos nutzbar mit dem öffentlichen Test-Key "1".
 // https://www.themealdb.com/api.php
@@ -109,13 +110,13 @@ export async function filterRecipesByCategory(
 // TheMealDB-Kategorien, die sich als Mittag-/Abendessen eignen (laut
 // Nutzereinstellung ohnehin gleichwertig, siehe useAppSettings). "Dessert"
 // bewusst ausgeschlossen, damit nicht plötzlich ein Kuchen als Hauptgericht
-// vorgeschlagen wird.
+// vorgeschlagen wird. "Seafood" ebenfalls ausgeschlossen – Nutzerwunsch,
+// keine Meeresfrüchte-Gerichte (Beispiel: Krabbensalat).
 const MAIN_COURSE_CATEGORIES = [
   'Chicken',
   'Beef',
   'Pasta',
   'Vegetarian',
-  'Seafood',
   'Pork',
   'Vegan',
   'Miscellaneous',
@@ -161,11 +162,17 @@ export async function getRandomRecipesForMeal(
     }
   }
 
-  const chosen = shuffle(candidateIds).slice(0, count)
+  // Mehr Kandidaten laden als gebraucht, da ein Teil gleich wieder durch den
+  // "studententauglich"-Filter fliegt (siehe simpleFilter.ts) – vorher war
+  // diese Ausweichquelle komplett ungefiltert (auch aufwendige Gourmet-
+  // Rezepte und Meeresfrüchte-Reste aus "Miscellaneous" landeten hier).
+  const shuffledIds = shuffle(candidateIds).slice(0, count * 3)
   const recipes = await Promise.all(
-    chosen.map((id) => getRecipeById(id).catch(() => null)),
+    shuffledIds.map((id) => getRecipeById(id).catch(() => null)),
   )
-  return recipes.filter((r): r is Recipe => r !== null)
+  const loaded = recipes.filter((r): r is Recipe => r !== null)
+  const filtered = loaded.filter(isStudentFriendly)
+  return (filtered.length > 0 ? filtered : loaded).slice(0, count)
 }
 
 export async function getRecipeById(id: string): Promise<Recipe | null> {

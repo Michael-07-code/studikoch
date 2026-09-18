@@ -91,8 +91,14 @@ export default function RecipeSwiper() {
             maxPricePerServingEuro: preferences.maxPriceEuro ?? undefined,
             excludeExoticIngredients: preferences.everydayIngredientsOnly,
             minCalories: preferences.fillingOnly ? 500 : undefined,
-            number: 8,
+            // Größere Menge pro Anfrage statt öfter kleine Mengen nachzuladen
+            // – spart Tageskontingent und liefert mehr Abwechslung aus einem
+            // einzigen Aufruf, bevor überhaupt erneut nachgefragt wird.
+            number: 15,
             sort: 'random',
+            // Nur hier true: die Tinder-Karte zeigt die Nährwerttabelle
+            // direkt, ohne weiteren Rezept-Detail-Aufruf.
+            includeNutrition: true,
           })
           recipes = results.map((r) => r.recipe)
         } catch (err) {
@@ -217,7 +223,17 @@ export default function RecipeSwiper() {
       // (und dauerhaft cachen), damit gespeicherte Rezepte nie mit leerer
       // Zutatenliste landen. Bei TheMealDB-Rezepten (id ohne "sp-"-Präfix)
       // ist "current" bereits vollständig, siehe getFullRecipeDetails.
-      const complete = await getFullRecipeDetails(current.id, current)
+      let complete: Recipe
+      try {
+        complete = await getFullRecipeDetails(current.id, current)
+      } catch {
+        // Nachladen fehlgeschlagen (z. B. Spoonacular-Tageskontingent gerade
+        // aufgebraucht) – lieber mit den schon vorhandenen, ggf. etwas
+        // unvollständigen Daten der Karte speichern, als das Speichern
+        // komplett abzubrechen ("Rezept konnte nicht gespeichert werden",
+        // obwohl eigentlich schon genug Daten für eine Karte da waren).
+        complete = current
+      }
       const full = await translateRecipe(complete)
       saveRecipe(full, {
         prepTimeMinutes: complete.prepTimeMinutes ?? current.prepTimeMinutes,

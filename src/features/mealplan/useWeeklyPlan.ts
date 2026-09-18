@@ -3,8 +3,8 @@ import {
   EMPTY_WEEKLY_PLAN,
   sanitizePlanSlots,
   type WeeklyPlan,
+  type WeeklyPlanSlot,
   type WeeklyPlanSlots,
-  type WeeklyPlanSlotValue,
 } from './types'
 
 /**
@@ -26,7 +26,7 @@ export function useWeeklyPlan() {
     patch({ weekly_plan: { ...plan, ...p } })
   }
 
-  function setSlot(key: string, slot: WeeklyPlanSlotValue | null) {
+  function setSlot(key: string, slot: WeeklyPlanSlot | null) {
     updatePlan({ slots: { ...plan.slots, [key]: slot } })
   }
 
@@ -35,9 +35,12 @@ export function useWeeklyPlan() {
   }
 
   // Markiert eine Mahlzeit explizit als "ich esse hier nichts" – bzw. macht
-  // das rückgängig (zurück zu einem leeren, noch unbelegten Slot).
+  // das rückgängig. Ein zuvor zugewiesenes Rezept bleibt dabei im Slot
+  // erhalten (nur das "skipped"-Flag wird umgeschaltet), damit "doch etwas
+  // essen" wieder das gleiche Rezept zeigt, statt den Slot leer zu lassen.
   function toggleSkip(key: string) {
-    setSlot(key, plan.slots[key] === 'skip' ? null : 'skip')
+    const current = plan.slots[key]
+    setSlot(key, { ...current, skipped: !current?.skipped })
   }
 
   function clearPlan() {

@@ -1,5 +1,6 @@
 import type { Recipe, RecipeIngredient, RecipeNutrition } from './types'
 import { extractRequiredEquipment } from './equipmentMatch'
+import { EXOTIC_OR_FANCY_INGREDIENTS, isStudentFriendly } from './simpleFilter'
 import {
   addToPool,
   getCachedRecipeDetail,
@@ -201,69 +202,10 @@ export interface BudgetRecipeSuggestion {
   estimatedCostEuro: number | null
 }
 
-// Zutaten, die in einem typischen (Studenten-)Haushalt bzw. im normalen
-// Supermarkt selten vorhanden, teuer oder schwer zu bekommen sind. Werden
-// standardmäßig ausgeschlossen, damit Vorschläge mit alltäglichen Zutaten
-// kochbar bleiben, statt eine Spezialzutat für ein einziges Rezept kaufen
-// zu müssen. Kein Anspruch auf Vollständigkeit – eine pragmatische
-// Stichwortliste, kein Ersatz für eine echte "wie üblich ist diese Zutat"-
-// Datenquelle (die es kostenlos nicht gibt).
-const EXOTIC_INGREDIENTS = [
-  'truffle',
-  'caviar',
-  'saffron',
-  'foie gras',
-  'venison',
-  'lobster',
-  'duck breast',
-  'wagyu',
-  'kobe beef',
-  'pomegranate molasses',
-  'star anise',
-  'dragon fruit',
-  'goji berries',
-  'nori',
-  'miso',
-  'gochujang',
-  'tamarind',
-  'sumac',
-  'harissa',
-  'quail',
-  'rabbit',
-  // Meeresfrüchte: laut Nutzerwunsch explizit unerwünscht (Beispiel:
-  // Krabbensalat) – hier statt über den viel breiteren Spoonacular-
-  // "Seafood"-Intoleranzfilter, damit gewöhnlicher Fisch (Lachs, Thunfisch
-  // aus der Dose, …) weiterhin vorgeschlagen werden kann.
-  'crab',
-  'shrimp',
-  'prawn',
-  'oyster',
-  'mussel',
-  'clam',
-  'scallop',
-  'squid',
-  'octopus',
-  'anchovy',
-  'crawfish',
-  'escargot',
-  'snail',
-]
-
-// Grobe Heuristik für "einfach umsetzbar, nichts für Gourmets": wenige
-// Zutaten und wenige Zubereitungsschritte. Kein Anspruch auf Präzision (das
-// gibt die Spoonacular-API nicht direkt her), aber deutlich besser als gar
-// kein Filter – sortiert typische Sterneküche-Rezepte mit 20 Zutaten und 15
-// Arbeitsschritten zuverlässig aus.
-const MAX_SIMPLE_INGREDIENTS = 10
-const MAX_SIMPLE_STEPS = 8
-
-function isSimpleEnough(recipe: Recipe): boolean {
-  return (
-    recipe.ingredients.length <= MAX_SIMPLE_INGREDIENTS &&
-    (recipe.instructions.length === 0 ||
-      recipe.instructions.length <= MAX_SIMPLE_STEPS)
-  )
-}
+// Gemeinsame "Studenten-freundlich"-Prüfung (Zutaten-/Schritt-Heuristik +
+// Meeresfrüchte-/Exoten-Ausschluss), siehe simpleFilter.ts – dieselbe
+// Prüfung gilt jetzt auch für die TheMealDB-Ausweichquelle (mealdb.ts),
+// vorher war nur diese Spoonacular-Suche gefiltert.
 
 // Wird geworfen, wenn Spoonacular ein aufgebrauchtes Tageskontingent meldet
 // (HTTP 402) oder eine Ratenbegrenzung greift (429) UND kein lokal
@@ -306,6 +248,12 @@ export interface BudgetSearchParams {
   // Spoonacular-Gerichtart, z. B. 'breakfast' oder 'main course' – nutzt
   // der Wochenplan, um pro Mahlzeitentyp passendere Vorschläge zu bekommen.
   dishType?: string
+  // Nährwerte kosten bei Spoonacular zusätzliches (knappes) Tageskontingent
+  // – nur anfordern, wenn sie auch direkt angezeigt werden (Rezepte-Tinder-
+  // Karte). Budget-Suche und Wochenplan zeigen Nährwerte erst nach Klick auf
+  // ein einzelnes Rezept (dort wird ohnehin über getRecipeInformation
+  // nachgeladen), brauchen sie also nicht schon in der Trefferliste.
+  includeNutrition?: boolean
 }
 
 /**
@@ -339,7 +287,9 @@ export async function searchBudgetRecipes(
   const url = new URL(`${BASE_URL}/complexSearch`)
   url.searchParams.set('apiKey', apiKey)
   url.searchParams.set('addRecipeInformation', 'true')
-  url.searchParams.set('addRecipeNutrition', 'true')
+  if (params.includeNutrition) {
+    url.searchParams.set('addRecipeNutrition', 'true')
+  }
   url.searchParams.set('instructionsRequired', 'true')
   url.searchParams.set('sort', params.sort ?? 'price')
   url.searchParams.set('number', String(params.number ?? 6))
@@ -356,7 +306,10 @@ export async function searchBudgetRecipes(
     )
   }
   if (params.excludeExoticIngredients) {
-    url.searchParams.set('excludeIngredients', EXOTIC_INGREDIENTS.join(','))
+    url.searchParams.set(
+      'excludeIngredients',
+      EXOTIC_OR_FANCY_INGREDIENTS.join(','),
+    )
   }
   if (params.minCalories) {
     url.searchParams.set('minCalories', String(params.minCalories))
@@ -416,7 +369,7 @@ export async function searchBudgetRecipes(
   // Zubereitung. Nur anwenden, wenn genug Ergebnisse übrig bleiben, damit
   // eine ansonsten passende Suche nicht komplett leer ausgeht.
   if (params.excludeExoticIngredients) {
-    const simplified = results.filter((r) => isSimpleEnough(r.recipe))
+    const simplified = results.filter((r) => isStudentFriendly(r.recipe))
     if (simplified.length > 0) results = simplified
   }
 
